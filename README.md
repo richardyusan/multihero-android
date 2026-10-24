@@ -5,7 +5,7 @@
 <h1 align="center">MultiHero for Android</h1>
 
 <p align="center">
-  An Android port of <b>MultiHero 0.96</b>, a 2D multiplayer platform fighting game written in Blitz3D,
+  An Android port of <b>MultiHero 0.96</b> by <b>mhman</b>, a 2D multiplayer platform fighting game written in Blitz3D,
   running its <b>original, unmodified Blitz BASIC source</b> through a custom Blitz → C++ transpiler
   and a lightweight native 2D runtime. No game engine required.
 </p>
@@ -132,9 +132,16 @@ syntax it does not understand.
 - The level editor (`Editor.bb`) is not ported.
 - Supports the Blitz BASIC subset used by MultiHero (no `Type`/`New`/`Each`, `Gosub`, `Data/Read`, 3D commands).
 
+## Credits
+
+- **MultiHero** – original game, design, code and level editor by **mhman**.
+  This port exists thanks to mhman's work and to the decision to share the MultiHero 0.96 source code.
+- **Android port** – Blitz → C++ transpiler, native runtime and Android packaging (this repository).
+- Characters, sprites and sounds used by the game belong to their respective owners (see [NOTICE.md](NOTICE.md)).
+
 ## License
 
 The porting code (`tools/`, `runtime/`, `android/`, `scripts/`, build files, docs) is released under the
-[MIT License](LICENSE). The original game source in `src/` belongs to the MultiHero author, and the
+[MIT License](LICENSE). The original game source in `src/` belongs to its author, **mhman**, and the
 characters used by the game belong to their respective owners. See [NOTICE.md](NOTICE.md).
 MultiHero is a non-commercial fan project and is not affiliated with any of those companies.
