@@ -1,0 +1,2755 @@
+;-------------- Initialize player ---------------------
+Function initZ(n)
+
+If flagOwner(1)=n Then flagCarried(1)=0
+If flagOwner(2)=n Then flagCarried(2)=0
+zjump(n)=0:zjumpseq(n)=0
+zHit(n)=0:zCurWeapon(n)=0:zjump2(n)=0:zhitbybox(n)=0
+zBouncedgnd(n)=0:zBlowSeq(n)=0:zBlowseq2(n)=0:zhit(n)=0
+zBlow(n)=0:zBlowStill(n)=0:zBlockLife(n)=zBlockFull(n):zDamage(n)=0
+zBlocked(n)=0: aiGetTarget(n):
+
+    zJumpSnd(n)=noSnd
+    dangerMove5(n)=1
+	zCurPic(n)=zPic_(CurGuy(n),1,0)
+	aiTarget(n)=0
+	zFace(n)=2
+	zlife(n)=100
+	zani(n)=1 : zf(n)=0
+	zheight(n)=45				;Player's current height
+	zUpHeight(n)=45
+	zDuckHeight(n)=25
+	zside(n)=9-1 				;Z width size / 2
+	zSpeed#(n)=0				;Player current speed
+	zShieldedTime(n)=150		;Time(frames) player stays invincible when recover
+	zBlockFull(n)=80
+	zBlockLife(n)=zBlockFull(n)
+	zCurWeapon(n)=0
+	zAcc#(n)=.2         ;.2
+	zgravity(n)=3       ;3		;Gravity force when falling Or going up
+	zjumplimit(n)=20    ;20		;Jump height (per frame), not pixels!
+	zDtopSpeed#(n)=2    ;2
+	zTopSpeed#(n)=zDtopSpeed(n)
+	zBlockSpeed(n)=.8
+	zJumping(n)=0
+	zDontJump(n)=0
+	zDontPickItem(n)=0
+	zNoAirSpecial(n)=0
+	zDeathChunk(n)=25
+	zStone(n)=0
+	zUngrabable(n)=0
+	yRange(n)=0
+	zUseSpecialAI(n)=0
+	zCanFly(n)=0
+	zGrabDist(n)=25
+	zLetGoAmount(n)=7			;reach this number with 'zLetGoSeq(x)' to let go of grab
+	zHelper(n)=0
+	zTrail(n)=0
+	zTrailType(n)=0
+	zHitByRect(nn)=0
+	zRollOnImpact(n)=0
+
+Select curGuy(n)	;Add character, add your new guy initial stuff, attack range, jump sound etc
+Case 1: ;Ryu
+	zBlowDist(n,1)=44
+	zBlowDist(n,2)=48
+	zBlowDist(n,4)=44
+	zBlowDist(n,5)=48
+	zBlowDist(n,7)=300
+	zBlowDist(n,9)=70	:dangerMove9(n)=1
+	zBlowDist(n,10)=44
+	zBlowDist(n,11)=150
+	zBlowDist(n,14)=600
+	zxHand(n,0)=2 :zyHand(n,0)=23
+	zxHand(n,1)=2 :zyHand(n,1)=23
+	zxHand(n,2)=-2 :zyHand(n,2)=23
+	zxHand(n,3)=-2 :zyHand(n,3)=23
+	zRollOnImpact(n)=1
+	zJumpSnd(n)=shotwallsnd
+	;zgravity(n)=8;test
+
+Case 2: ;Rash
+	zBlowDist(n,1)=65
+	zBlowDist(n,2)=75
+	zBlowDist(n,4)=60
+	zBlowDist(n,5)=55
+	zBlowDist(n,7)=68
+	zBlowDist(n,9)=80	:dangerMove9(n)=1
+	zBlowDist(n,10)=45
+	zBlowDist(n,11)=150
+	zBlowDist(n,14)=280
+	zxHand(n,0)=-5 :zyHand(n,0)=20
+	zxHand(n,1)=6 :zyHand(n,1)=23
+	zxHand(n,2)=-13 :zyHand(n,2)=22
+	zxHand(n,3)=-8 :zyHand(n,3)=20
+	zRollOnImpact(n)=1
+	zJumpSnd(n)=shotwallsnd
+
+Case 3: ;Spider-man
+	zBlowDist(n,1)=55
+	zBlowDist(n,2)=52
+	zBlowDist(n,4)=70
+	zBlowDist(n,5)=75
+	zBlowDist(n,7)=300
+	zBlowDist(n,9)=110	:dangerMove9(n)=1
+	zBlowDist(n,10)=84
+	zBlowDist(n,11)=150
+	zBlowDist(n,14)=400
+	zGrabDist(n)=25
+	zxHand(n,0)=-10 :zyHand(n,0)=10
+	zxHand(n,1)=-11 :zyHand(n,1)=11
+	zxHand(n,2)=-13 :zyHand(n,2)=12
+	zxHand(n,3)=-13 :zyHand(n,3)=10
+	zRollOnImpact(n)=1
+	zJumpSnd(n)=shotwallsnd
+
+Case 4: ;Mario
+	zBlowDist(n,1)=92
+	zBlowDist(n,2)=43
+	zBlowDist(n,4)=53
+	zBlowDist(n,5)=42
+	zBlowDist(n,7)=300
+	zBlowDist(n,9)=39	:dangerMove9(n)=0
+	zBlowDist(n,10)=34
+	zBlowDist(n,11)=150
+	zBlowDist(n,14)=500
+	zxHand(n,0)=-11 :zyHand(n,0)=15
+	zxHand(n,1)=7 :zyHand(n,1)=17
+	zxHand(n,2)=-11 :zyHand(n,2)=14
+	zxHand(n,3)=-6 :zyHand(n,3)=13
+	zRollOnImpact(n)=1
+	zJumpSnd(n)=shotwallsnd
+
+Case 5: ;Michaelangelo
+	zBlowDist(n,1)=64
+	zBlowDist(n,2)=52
+	zBlowDist(n,4)=53
+	zBlowDist(n,5)=75
+	zBlowDist(n,7)=300
+	zBlowDist(n,9)=110	:dangerMove9(n)=1
+	zBlowDist(n,10)=55
+	zBlowDist(n,11)=150
+	zBlowDist(n,14)=70
+	zGrabDist(n)=zGrabDist(n)+5
+	zxHand(n,0)=-6 :zyHand(n,0)=22
+	zxHand(n,1)=-6 :zyHand(n,1)=20
+	zxHand(n,2)=-5 :zyHand(n,2)=21
+	zxHand(n,3)=-7 :zyHand(n,3)=20
+	zRollOnImpact(n)=1
+	zJumpSnd(n)=shotwallsnd
+
+Case 6: ;Ryu (gaiden)
+	zBlowDist(n,1)=60
+	zBlowDist(n,2)=52
+	zBlowDist(n,4)=53
+	zBlowDist(n,5)=48
+	zBlowDist(n,7)=300
+	zBlowDist(n,9)=90	:dangerMove9(n)=1
+	zBlowDist(n,10)=50
+	zBlowDist(n,11)=150
+	zBlowDist(n,14)=120
+	zxHand(n,0)=-5 :zyHand(n,0)=21
+	zxHand(n,1)=-5 :zyHand(n,1)=22
+	zxHand(n,2)=-5 :zyHand(n,2)=21
+	zxHand(n,3)=-4 :zyHand(n,3)=21
+	zRollOnImpact(n)=1
+	zJumpSnd(n)=shotwallsnd
+
+Case 7: ;Batman
+	zBlowDist(n,1)=48
+	zBlowDist(n,2)=58
+	zBlowDist(n,4)=55
+	zBlowDist(n,5)=48
+	zBlowDist(n,7)=250
+	zBlowDist(n,9)=100	:dangerMove9(n)=0
+	zBlowDist(n,10)=45
+	zBlowDist(n,11)=150
+	zBlowDist(n,14)=300
+	zGrabDist(n)=zGrabDist(n)+5
+	zxHand(n,0)=-4 :zyHand(n,0)=20
+	zxHand(n,1)=-8 :zyHand(n,1)=20
+	zxHand(n,2)=16 :zyHand(n,2)=14
+	zxHand(n,3)=-2 :zyHand(n,3)=15
+	zRollOnImpact(n)=1
+	zJumpSnd(n)=shotwallsnd
+
+Case 8: ;Predator
+	zBlowDist(n,1)=48
+	zBlowDist(n,2)=58
+	zBlowDist(n,4)=55
+	zBlowDist(n,5)=48
+	zBlowDist(n,7)=500
+	zBlowDist(n,9)=150	:dangerMove9(n)=0
+	zBlowDist(n,10)=45
+	zBlowDist(n,11)=150
+	zBlowDist(n,14)=500
+	zGrabDist(n)=zGrabDist(n)+7
+	zxHand(n,0)=-5 :zyHand(n,0)=23
+	zxHand(n,1)=4 :zyHand(n,1)=22
+	zxHand(n,2)=-11 :zyHand(n,2)=24
+	zxHand(n,3)=-5 :zyHand(n,3)=24
+	zRollOnImpact(n)=1
+	zJumpSnd(n)=shotwallsnd
+	
+Case 9: ;Goku
+	zBlowDist(n,1)=54
+	zBlowDist(n,2)=48
+	zBlowDist(n,4)=44
+	zBlowDist(n,5)=48
+	zBlowDist(n,7)=300
+	zBlowDist(n,9)=70	:dangerMove9(n)=1
+	zBlowDist(n,10)=39
+	zBlowDist(n,11)=150
+	zBlowDist(n,14)=600
+	zxHand(n,0)=2 :zyHand(n,0)=23
+	zxHand(n,1)=2 :zyHand(n,1)=23
+	zxHand(n,2)=-2 :zyHand(n,2)=23
+	zxHand(n,3)=-2 :zyHand(n,3)=23
+	zRollOnImpact(n)=1
+	zJumpSnd(n)=shotwallsnd
+
+Case 10: ;Richter Belmont
+	zBlowDist(n,1)=110
+	zBlowDist(n,2)=110
+	zBlowDist(n,4)=110
+	zBlowDist(n,5)=48
+	zBlowDist(n,7)=200
+	zBlowDist(n,9)=400	:dangerMove9(n)=0
+	zBlowDist(n,10)=44
+	zBlowDist(n,11)=150
+	zBlowDist(n,14)=600
+	zxHand(n,0)=15 :zyHand(n,0)=21
+	zxHand(n,1)=7 :zyHand(n,1)=23
+	zxHand(n,2)=-11 :zyHand(n,2)=20
+	zxHand(n,3)=-6 :zyHand(n,3)=19
+	zRollOnImpact(n)=1
+	zJumpSnd(n)=shotwallsnd
+
+
+Case 30: ;Pig
+	zBlowDist(n,1)=64
+	zBlowDist(n,2)=60
+	zBlowDist(n,4)=60
+	zBlowDist(n,5)=60
+	zBlowDist(n,7)=60
+	zBlowDist(n,9)=60	:dangerMove9(n)=1
+	zBlowDist(n,10)=80
+	zBlowDist(n,11)=60
+	zBlowDist(n,14)=60
+	zDuckHeight(n)=45
+	zJumpLimit(n)=10
+	zDontJump(n)=1
+	zDontPickItem(n)=1
+	zDtopSpeed#(n)=1.5
+	zTopSpeed#(n)=zDtopSpeed(n)
+	zNoAirSpecial(n)=1
+
+Case 31: ;Alien
+	zBlowDist(n,1)=64
+	zBlowDist(n,2)=60
+	zBlowDist(n,4)=60
+	zBlowDist(n,5)=60
+	zBlowDist(n,7)=100
+	zBlowDist(n,9)=60	:dangerMove9(n)=1
+	zBlowDist(n,10)=80
+	zBlowDist(n,11)=60
+	zBlowDist(n,14)=60
+	zheight(n)=40				;Player's current height
+	zUpHeight(n)=40
+	zDuckHeight(n)=40
+	zDontPickItem(n)=1
+	zNoAirSpecial(n)=1
+
+Case 32: ;Foot Clan
+	zBlowDist(n,1)=50
+	zBlowDist(n,2)=55
+	zBlowDist(n,4)=70
+	zBlowDist(n,5)=70
+	zBlowDist(n,7)=70
+	zBlowDist(n,9)=70	:dangerMove9(n)=1
+	zBlowDist(n,10)=55
+	zBlowDist(n,11)=55
+	zBlowDist(n,14)=55
+	zDuckHeight(n)=45
+	zDontPickItem(n)=1
+	zNoAirSpecial(n)=1
+
+Case 33: ;Shredder
+	zBlowDist(n,1)=50
+	zBlowDist(n,2)=50
+	zBlowDist(n,4)=50
+	zBlowDist(n,5)=50
+	zBlowDist(n,7)=110
+	zBlowDist(n,9)=110	:dangerMove9(n)=0
+	zBlowDist(n,10)=50
+	zBlowDist(n,11)=50
+	zBlowDist(n,14)=50
+	zDontPickItem(n)=1
+
+Case 34: ;Thug
+	zBlowDist(n,1)=40
+	zBlowDist(n,2)=60
+	zBlowDist(n,4)=40
+	zBlowDist(n,5)=40
+	zBlowDist(n,7)=40
+	zBlowDist(n,9)=40	:dangerMove9(n)=0
+	zBlowDist(n,10)=40
+	zBlowDist(n,11)=40
+	zBlowDist(n,14)=40
+	zDontPickItem(n)=1
+	zNoAirSpecial(n)=1
+	zRollOnImpact(n)=1
+
+Case 35: ;Red horns
+	zBlowDist(n,1)=164
+	zBlowDist(n,2)=160
+	zBlowDist(n,4)=160
+	zBlowDist(n,5)=160
+	zBlowDist(n,7)=160
+	zBlowDist(n,9)=160	:dangerMove9(n)=0
+	zBlowDist(n,10)=160
+	zBlowDist(n,11)=160
+	zBlowDist(n,14)=160
+	zDuckHeight(n)=45
+	zJumpLimit(n)=10
+	zDontJump(n)=1
+	zDontPickItem(n)=1
+	zDtopSpeed#(n)=.5
+	zTopSpeed#(n)=zDtopSpeed(n)
+	zNoAirSpecial(n)=1
+
+Case 36: ;Gargola
+	zBlowDist(n,1)=364
+	zBlowDist(n,2)=360
+	zBlowDist(n,4)=360
+	zBlowDist(n,5)=360
+	zBlowDist(n,7)=360
+	zBlowDist(n,9)=360	:dangerMove9(n)=0
+	zBlowDist(n,10)=360
+	zBlowDist(n,11)=360
+	zBlowDist(n,14)=360
+	zSide(n)=25
+	zDuckHeight(n)=45
+	zJumpLimit(n)=10
+	zDontJump(n)=1
+	zDontPickItem(n)=1
+	zDtopSpeed#(n)=0
+	zTopSpeed#(n)=zDtopSpeed(n)
+	zNoAirSpecial(n)=1
+	zStone(n)=1
+	zUngrabable(n)=1
+	yRange(n)=200
+
+Case 37: ;Red plant
+	zBlowDist(n,1)=364
+	zBlowDist(n,2)=360
+	zBlowDist(n,4)=360
+	zBlowDist(n,5)=360
+	zBlowDist(n,7)=360
+	zBlowDist(n,9)=360	:dangerMove9(n)=0
+	zBlowDist(n,10)=360
+	zBlowDist(n,11)=360
+	zBlowDist(n,14)=360
+	zDuckHeight(n)=45
+	zJumpLimit(n)=0
+	zDontJump(n)=1
+	zDontPickItem(n)=1
+	zDtopSpeed#(n)=0
+	zTopSpeed#(n)=zDtopSpeed(n)
+	zNoAirSpecial(n)=1
+	zStone(n)=1
+	zUngrabable(n)=1
+
+Case 38: ;Bowser
+	zBlowDist(n,1)=120
+	zBlowDist(n,2)=360
+	zBlowDist(n,4)=360
+	zBlowDist(n,5)=100
+	zBlowDist(n,7)=360
+	zBlowDist(n,9)=120	:dangerMove9(n)=0
+	zBlowDist(n,10)=120
+	zBlowDist(n,11)=360
+	zBlowDist(n,14)=360
+	zheight(n)=52
+	zUpHeight(n)=52
+	zDuckHeight(n)=52
+	zSide(n)=18
+	zJumpLimit(n)=0
+	zDontJump(n)=1
+	zNoAirSpecial(n)=1
+	zDontPickItem(n)=1
+	zStone(n)=1
+	zUngrabable(n)=1
+	yRange(n)=100
+
+Case 39	;thief
+	zBlowDist(n,1)=200
+	zBlowDist(n,2)=200
+	zBlowDist(n,4)=200
+	zBlowDist(n,5)=200
+	zBlowDist(n,7)=200
+	zBlowDist(n,9)=200	:dangerMove9(n)=0
+	zBlowDist(n,10)=200
+	zBlowDist(n,11)=200
+	zBlowDist(n,14)=200
+	zDuckHeight(n)=45
+	zDontJump(n)=1
+	zDontPickItem(n)=1
+	zNoAirSpecial(n)=1
+
+Case 40	;turtle
+	zBlowDist(n,1)=200
+	zBlowDist(n,2)=200
+	zBlowDist(n,4)=200
+	zBlowDist(n,5)=200
+	zBlowDist(n,7)=200
+	zBlowDist(n,9)=200	:dangerMove9(n)=0
+	zBlowDist(n,10)=200
+	zBlowDist(n,11)=200
+	zBlowDist(n,14)=200
+	zheight(n)=40
+	zUpHeight(n)=40
+	zDuckHeight(n)=40
+	zDontJump(n)=1
+	zDontPickItem(n)=1
+	zNoAirSpecial(n)=1
+
+Case 41: ;Turtle Cloud
+	zJumpLimit(n)=0
+	zDontJump(n)=1
+	zDontPickItem(n)=1
+	zDtopSpeed#(n)=1.5
+	zTopSpeed#(n)=zDtopSpeed(n)
+	zNoAirSpecial(n)=1
+	zStone(n)=1
+	zUngrabable(n)=1
+	zAcc(n)=.1
+	zUseSpecialAI(n)=1
+	zCanFly(n)=1
+	zhelper(n)=1
+	If zvar1(n) > 0 Then
+		zDtopSpeed(n)=zvar1(n)
+		zTopSpeed(n)=zDTopSpeed(n)
+	EndIf
+
+Case 42	;Joker
+	zBlowDist(n,1)=50       ;1  - blow
+	zBlowDist(n,2)=200      ;2  - flying blow
+	zBlowDist(n,4)=50       ;4  - low blow
+	zBlowDist(n,5)=50       ;5  - up special
+	zBlowDist(n,7)=200      ;7  - special
+	zBlowDist(n,9)=200	:dangerMove9(n)=0;9  - down special
+	zBlowDist(n,10)=50      ;10 - high blow
+	zBlowDist(n,11)=200
+	zBlowDist(n,14)=200
+	zDuckHeight(n)=45
+	zNoAirSpecial(n)=1
+	zDtopSpeed#(n)=2.5
+	zDontPickItem(n)=1
+	zTopSpeed#(n)=zDtopSpeed(n)
+
+Case 43;Laser helper
+	zUpHeight(n)=20
+	zDuckHeight(n)=20
+	zNoAirSpecial(n)=1
+	zDtopSpeed#(n)=0
+	zTopSpeed#(n)=zDtopSpeed(n)
+	zDontPickItem(n)=1
+	zDontJump(n)=1
+	zStone(n)=1
+	zUngrabable(n)=1
+	zhelper(n)=1
+	zUseSpecialAI(n)=1
+
+Case 44	;Venom
+	zBlowDist(n,1)=120
+	zBlowDist(n,2)=120
+	zBlowDist(n,4)=120
+	zBlowDist(n,5)=60   : dangerMove5(n)=0
+	zBlowDist(n,7)=120
+	zBlowDist(n,9)=120	:dangerMove9(n)=0
+	zBlowDist(n,10)=60
+	zBlowDist(n,11)=50
+	zBlowDist(n,14)=50
+	zGrabDist(n)=zGrabDist(n)+15
+	zDontPickItem(n)=1
+	zStone(n)=1
+	zUngrabable(n)=1
+	zBlockFull(n)=500
+
+Case 45	;bombing ship
+	zUpHeight(n)=40
+	zDtopSpeed#(n)=8
+	zTopSpeed#(n)=zDtopSpeed(n)
+	zUseSpecialAI(n)=1
+	zStone(n)=1
+	zUngrabable(n)=1
+	zhelper(n)=1
+	zDontPickItem(n)=1
+	If zvar1(n) = 0 Then zvar1(n) = 12
+	If zvar2(n) > 0 Then zFace(n)=zvar2(n)
+	If gamesound Then PlaySound flyBySnd
+	zBlowSeq2(n)=0
+	zCanFly(n)=1
+	zUseSpecialAI(n)=1
+
+Case 46	;Ray balls
+	zUpHeight(n)=20
+	zDuckHeight(n)=20
+	zNoAirSpecial(n)=1
+	zDtopSpeed#(n)=0
+	zTopSpeed#(n)=zDtopSpeed(n)
+	zDontPickItem(n)=1
+	zDontJump(n)=1
+	zStone(n)=1
+	zUngrabable(n)=1
+	zhelper(n)=1
+	zUseSpecialAI(n)=1
+
+Case 47	;soldier
+	zDontJump(n)=1
+	zNoAirSpecial(n)=1
+	zDtopSpeed#(n)=0
+	zTopSpeed#(n)=zDtopSpeed(n)
+	zDontPickItem(n)=1
+	zUseSpecialAI(n)=1
+
+Case 48: ;Cylinder
+	zUpHeight(n)=20
+	zDuckHeight(n)=20
+	zDontPickItem(n)=1
+	zDtopSpeed(n)=1
+	zTopSpeed(n)=zDtopSpeed(n)
+	zStone(n)=1
+	zUngrabable(n)=1
+	zAcc(n)=.1
+	zUseSpecialAI(n)=1
+	zCanFly(n)=1
+
+Case 49: ;Dragon
+	zUpHeight(n)=65
+	zDuckHeight(n)=zUpHeight(n)
+	zSide(n)=50
+	zDontPickItem(n)=1
+	zDtopSpeed(n)=1
+	zTopSpeed(n)=zDtopSpeed(n)
+	zStone(n)=1
+	zUngrabable(n)=1
+	zAcc(n)=.1
+	zUseSpecialAI(n)=1
+	zCanFly(n)=1
+
+Case 50: ;Laser beam
+	zUpHeight(n)=20
+	zDuckHeight(n)=20
+	zSide(n)=2
+	zDontPickItem(n)=1
+	zDtopSpeed(n)=0
+	zTopSpeed(n)=zDtopSpeed(n)
+	zStone(n)=1
+	zUngrabable(n)=1
+	zAcc(n)=0
+	zUseSpecialAI(n)=1
+	zCanFly(n)=1
+	zHelper(n)=1
+
+	;zxrespawn(n)=zx(n)
+	;zyrespawn(n)=zy(n)
+
+Case 51: ;Gray Ninja
+	zBlowDist(n,1)=60
+	zBlowDist(n,2)=52
+	zBlowDist(n,4)=53
+	zBlowDist(n,5)=48
+	zBlowDist(n,7)=300
+	zBlowDist(n,9)=90	:dangerMove9(n)=1
+	zBlowDist(n,10)=50
+	zBlowDist(n,11)=150
+	zBlowDist(n,14)=120
+	zxHand(n,0)=-5 :zyHand(n,0)=21
+	zxHand(n,1)=-5 :zyHand(n,1)=22
+	zxHand(n,2)=-5 :zyHand(n,2)=21
+	zxHand(n,3)=-4 :zyHand(n,3)=21
+	zDtopSpeed(n)=2.5
+	zTopSpeed(n)=zDtopSpeed(n)
+	zjumplimit(n)=22
+	zRollOnImpact(n)=1
+
+Case 52: ;punching bag
+	zUpHeight(n)=34
+	zDuckHeight(n)=34
+	zSide(n)=7
+	zDontPickItem(n)=1
+	zDtopSpeed(n)=0
+	zTopSpeed(n)=zDtopSpeed(n)
+	zUngrabable(n)=1
+	zAcc(n)=0
+	zUseSpecialAI(n)=1
+	zHelper(n)=1
+
+End Select
+
+
+End Function
+;-----------shotData--------------------------------------------
+Function shotData(weaponChosen,n)
+
+;Defaut Values
+	shotType(n)=weaponChosen
+	shotOwner(n)=0
+	shotspeed(n)=3
+	shotsize(n)=10
+	shotheight(n)=10
+	shotSide(n)=shotsize(n)/2
+	shotdamage(n)=3
+	shotHitXspeed(n)=2
+	shotHitYspeed(n)=2
+	shotFallTime(n)=30
+	shotHitMode(n)=2
+	shotImpact(n)=8
+	shotDuration(n)=50
+	shotDuration2(n)=80
+	shotDurationSeq(n)=0
+	shotBounce(n)=0
+	shotUturn(n)=0
+	shotUturnSeq(n)=0
+	shotUturnAmount(n)=0
+	shotFollowOwner(n)=0
+	shotAcc(n)=.2
+	shotMaxSpeed(n)=shotSpeed(n)
+	shotDrill(n)=0
+	shotChunkType(n)=20
+	zShotLimit(nn)=99
+	shotCurFrame(n)=1
+	shotFrameTime(n)=999
+	shotFramesAmount(n)=1
+	shotImuneTime(n)=20
+	shotSound(n)=mikekicksnd
+	shotHitTrail(n)=0
+	shotTrailType(n)=0
+	shotSuper(n)=0
+	shotUseAcc(n)=0
+	shotHold(n)=8
+	shotExplosive(n)=0
+	shotExplosionSound(n)=explodeSnd
+
+Select weaponChosen
+
+Case 5	;ryu ball
+	shotspeed(n)=3
+	shotsize(n)=18
+	shotheight(n)=16
+	shotSide(n)=shotsize(n)/2
+	shotdamage(n)=4
+	shotHitXspeed(n)=2
+	shotHitYspeed(n)=2
+	shotFallTime(n)=20
+	shotDuration(n)=200
+	shotMaxSpeed(n)=shotSpeed(n)
+	shotChunkType(n)=3
+	shotPic(n,1)=shotImage(5)
+	shotPic_(n,1)=shotImage_(5)
+	shotSound(n)=HighPunchsnd
+
+Case 6	;web shot
+	shotspeed(n)=3
+	shotsize(n)=24
+	shotheight(n)=7
+	shotSide(n)=shotsize(n)/2
+	shotdamage(n)=4
+	shotHitXspeed(n)=2
+	shotHitYspeed(n)=2
+	shotFallTime(n)=20
+	shotDuration(n)=200
+	shotMaxSpeed(n)=shotSpeed(n)
+	shotChunkType(n)=6
+	shotPic(n,1)=shotImage(6)
+	shotPic_(n,1)=shotImage_(6)
+	shotSound(n)=webhitsnd
+
+Case 7	; fire ball
+	shotspeed(n)=3
+	shotsize(n)=12
+	shotheight(n)=15
+	shotSide(n)=shotsize(n)/2
+	shotdamage(n)=4
+	shotHitXspeed(n)=2
+	shotHitYspeed(n)=2
+	shotFallTime(n)=20
+	shotDuration(n)=200
+	shotMaxSpeed(n)=shotSpeed(n)
+	shotChunkType(n)=7
+	shotPic(n,1)=shotImage(7)
+	shotPic_(n,1)=shotImage(7)
+	shotSound(n)=firehitsnd
+	shotHitTrail(n)=1
+
+Case 8	;laser
+	shotspeed(n)=5
+	shotsize(n)=12
+	shotheight(n)=6
+	shotSide(n)=shotsize(n)/2
+	shotdamage(n)=15
+	shotHitXspeed(n)=4
+	shotHitYspeed(n)=2
+	shotFallTime(n)=40
+	shotHitMode(n)=0
+	shotImpact(n)=15
+	shotDuration(n)=200
+	shotMaxSpeed(n)=shotSpeed(n)
+	shotChunkType(n)=7
+	shotPic(n,1)=shotImage(8)
+	shotPic_(n,1)=shotImage(8)
+	shotSound(n)=firehitsnd
+	shotHitTrail(n)=1
+
+Case 9	;Mike's dragon fire ball
+	shotspeed(n)=3
+	shotsize(n)=14
+	shotheight(n)=12
+	shotSide(n)=shotsize(n)/2
+	shotdamage(n)=4
+	shotHitXspeed(n)=2
+	shotHitYspeed(n)=2
+	shotFallTime(n)=20
+	shotDuration(n)=200
+	shotMaxSpeed(n)=shotSpeed(n)
+	shotChunkType(n)=3
+	shotPic(n,1)=shotImage(9)
+	shotPic_(n,1)=shotImage_(9)
+	shotSound(n)=highPunchSnd
+
+Case 10	;bullet
+	shotspeed(n)=7
+	shotsize(n)=16
+	shotheight(n)=3
+	shotSide(n)=shotsize(n)/2
+	shotdamage(n)=3
+	shotHitXspeed(n)=2
+	shotHitYspeed(n)=2
+	shotFallTime(n)=30
+	shotImpact(n)=10
+	shotDuration(n)=200
+	shotMaxSpeed(n)=shotSpeed(n)
+	shotChunkType(n)=5
+	zShotLimit(nn)=10
+	shotPic(n,1)=shotImage(2)
+	shotPic_(n,1)=shotImage(2)
+	shotSound(n)=gotShotSnd
+
+Case 11	;Rash Axe
+	shotspeed(n)=6
+	shotsize(n)=48
+	shotheight(n)=29
+	shotSide(n)=shotsize(n)/2
+	shotdamage(n)=8
+	shotHitXspeed(n)=1
+	shotHitYspeed(n)=1
+	shotFallTime(n)=30
+	shotImpact(n)=20
+	shotDuration(n)=40
+	shotMaxSpeed(n)=shotSpeed(n)
+	shotChunkType(n)=20
+	shotPic(n,1)=shotImage(11)
+	shotPic_(n,1)=shotImage_(11)
+	shotSound(n)=RashHitSnd
+
+Case 12	;Rash Axe (hit mode 0)
+	shotspeed(n)=6
+	shotsize(n)=48
+	shotheight(n)=29
+	shotSide(n)=shotsize(n)/2
+	shotdamage(n)=8
+	shotHitXspeed(n)=1
+	shotHitYspeed(n)=1
+	shotFallTime(n)=30
+	shotHitMode(n)=0
+	shotImpact(n)=20
+	shotDuration(n)=40
+	shotMaxSpeed(n)=shotSpeed(n)
+	shotChunkType(n)=20
+	shotPic(n,1)=shotImage(11)
+	shotPic_(n,1)=shotImage_(11)
+	shotSound(n)=RashHitSnd
+
+Case 13	;fire ball (hitMode=0)
+	shotspeed(n)=6
+	shotsize(n)=12
+	shotheight(n)=15
+	shotSide(n)=shotsize(n)/2
+	shotdamage(n)=4
+	shotHitXspeed(n)=2
+	shotHitYspeed(n)=2
+	shotFallTime(n)=20
+	shotHitMode(n)=0
+	shotImpact(n)=20
+	shotDuration(n)=50
+	shotMaxSpeed(n)=shotSpeed(n)
+	shotChunkType(n)=7
+	shotPic(n,1)=shotImage(7)
+	shotPic_(n,1)=shotImage(7)
+	shotSound(n)=firehitsnd
+	shotHitTrail(n)=1
+
+Case 14	;fire ball (weak And fast for super special)
+	shotspeed(n)=6
+	shotsize(n)=12
+	shotheight(n)=15
+	shotSide(n)=shotsize(n)/2
+	shotdamage(n)=1
+	shotHitXspeed(n)=1
+	shotHitYspeed(n)=0
+	shotFallTime(n)=30
+	shotDuration(n)=50
+	shotMaxSpeed(n)=shotSpeed(n)
+	shotChunkType(n)=7
+	shotPic(n,1)=shotImage(7)
+	shotPic_(n,1)=shotImage(7)
+	shotSound(n)=firehitsnd
+	shotHitTrail(n)=1
+
+Case 15	;ryu hayabusa ninja star
+	shotspeed(n)=4
+	shotsize(n)=12
+	shotheight(n)=12
+	shotSide(n)=shotsize(n)/2
+	shotdamage(n)=3
+	shotHitXspeed(n)=2
+	shotHitYspeed(n)=2
+	shotFallTime(n)=20
+	shotDuration(n)=200
+	shotMaxSpeed(n)=shotSpeed(n)
+	shotChunkType(n)=5
+	shotPic(n,1)=shotImage(12)
+	shotPic_(n,1)=shotImage(12)
+	shotPic(n,2)=shotImage(13)
+	shotPic_(n,2)=shotImage(13)
+	shotFramesAmount(n)=2
+	shotFrameTime(n)=2
+	shotSound(n)=slashSnd
+
+Case 16	;ninja star Uturn boomerang effect
+	shotspeed(n)=5
+	shotsize(n)=16
+	shotheight(n)=16
+	shotSide(n)=shotsize(n)/2
+	shotdamage(n)=2
+	shotHitMode(n)=0
+	shotFallTime(n)=40
+	shotDuration(n)=15
+	shotDuration2(n)=55
+	shotFollowOwner(n)=1
+	shotBounce(n)=1
+	shotUseAcc(n)=1
+	shotImuneTime(n)=30
+	shotUturn(n)=1
+	shotUturnAmount(n)=4
+	shotAcc(n)=.2
+	shotDrill(n)=1
+	shotMaxSpeed(n)=shotSpeed(n)
+	shotChunkType(n)=5
+	shotPic(n,1)=shotImage(14)
+	shotPic_(n,1)=shotImage(14)
+	shotPic(n,2)=shotImage(15)
+	shotPic_(n,2)=shotImage(15)
+	shotFramesAmount(n)=2
+	shotFrameTime(n)=3
+	shotSound(n)=slashsnd
+
+Case 17	;Red Horns Uturn fire
+	shotspeed(n)=4
+	shotsize(n)=16
+	shotheight(n)=16
+	shotSide(n)=shotsize(n)/2
+	shotdamage(n)=3
+	shotHitMode(n)=0
+	shotHitXspeed(n)=2
+	shotHitYspeed(n)=3
+	shotFallTime(n)=40
+	shotDuration(n)=25
+	shotDuration2(n)=45
+	shotFollowOwner(n)=1
+	shotBounce(n)=1
+	shotImuneTime(n)=30
+	shotUturn(n)=1
+	shotUturnAmount(n)=0
+	shotAcc(n)=.2
+	shotUseAcc(n)=1
+	shotDrill(n)=1
+	shotMaxSpeed(n)=shotSpeed(n)
+	shotChunkType(n)=20
+	shotPic(n,1)=shotImage(16)
+	shotPic_(n,1)=shotImage(16)
+	shotPic(n,2)=shotImage(17)
+	shotPic_(n,2)=shotImage(17)
+	shotFramesAmount(n)=2
+	shotFrameTime(n)=3
+	shotSound(n)=firehitsnd
+
+Case 18	;pink blob
+	shotspeed(n)=3
+	shotsize(n)=24
+	shotheight(n)=24
+	shotSide(n)=shotsize(n)/2
+	shotdamage(n)=5
+	shotHitMode(n)=0
+	shotHitXspeed(n)=3
+	shotHitYspeed(n)=3
+	shotFallTime(n)=40
+	shotDuration(n)=300
+	shotChunkType(n)=5
+	shotPic(n,1)=shotImage(18)
+	shotPic_(n,1)=shotImage(18)
+	shotPic(n,2)=shotImage(19)
+	shotPic_(n,2)=shotImage(19)
+	shotFramesAmount(n)=2
+	shotFrameTime(n)=3
+	shotSound(n)=webhitsnd
+
+Case 19	; bowser fire ball
+	shotspeed(n)=3
+	shotsize(n)=24
+	shotheight(n)=14
+	shotSide(n)=shotsize(n)/2
+	shotdamage(n)=5
+	shotHitXspeed(n)=3
+	shotHitYspeed(n)=2
+	shotFallTime(n)=50
+	shotDuration(n)=400
+	shotMaxSpeed(n)=shotSpeed(n)
+	shotChunkType(n)=7
+	shotPic(n,1)=shotImage(20)
+	shotPic_(n,1)=shotImage_(20)
+	shotPic(n,2)=shotImage(21)
+	shotPic_(n,2)=shotImage_(21)
+	shotPic(n,3)=shotImage(22)
+	shotPic_(n,3)=shotImage_(22)
+	shotFramesAmount(n)=3
+	shotFrameTime(n)=3
+	shotSound(n)=firehitsnd
+	shotHitTrail(n)=1
+
+Case 20	;batrang
+	shotspeed(n)=4
+	shotsize(n)=14
+	shotheight(n)=10
+	shotSide(n)=shotsize(n)/2
+	shotdamage(n)=5
+	shotHitMode(n)=2
+	shotHitXspeed(n)=4
+	shotHitYspeed(n)=2
+	shotFallTime(n)=40
+	shotDuration(n)=30
+	shotDuration2(n)=52
+	shotFollowOwner(n)=1
+	shotBounce(n)=1
+	shotUseAcc(n)=1
+	shotImuneTime(n)=15
+	shotUturn(n)=1
+	shotAcc(n)=.2
+	shotMaxSpeed(n)=shotSpeed(n)
+	shotChunkType(n)=50
+	shotPic(n,1)=shotImage(23)
+	shotPic_(n,1)=shotImage_(23)
+	shotSound(n)=bhitSnd
+
+Case 21	;predator green ray
+	shotspeed(n)=5
+	shotsize(n)=8
+	shotheight(n)=6
+	shotSide(n)=shotsize(n)/2
+	shotdamage(n)=7
+	shotHitXspeed(n)=4
+	shotHitYspeed(n)=2
+	shotFallTime(n)=50
+	shotDuration(n)=150
+	shotMaxSpeed(n)=shotSpeed(n)
+	shotChunkType(n)=50
+	shotDrill(n)=1
+	shotPic(n,1)=shotImage(24)
+	shotPic_(n,1)=shotImage_(24)
+	shotPic(n,2)=shotImage(25)
+	shotPic_(n,2)=shotImage_(25)
+	shotFramesAmount(n)=2
+	shotFrameTime(n)=4
+	shotImuneTime(n)=20
+	shotHitTrail(n)=2
+	shotSound(n)=predHitSnd
+
+Case 22	;predator disc
+	shotspeed(n)=4
+	shotsize(n)=11
+	shotheight(n)=18
+	shotSide(n)=shotsize(n)/2
+	shotdamage(n)=5
+	shotHitMode(n)=2
+	shotHitXspeed(n)=4
+	shotHitYspeed(n)=2
+	shotFallTime(n)=40
+	shotDuration(n)=30
+	shotDuration2(n)=52 ; 52
+	shotFollowOwner(n)=1
+	shotBounce(n)=1
+	shotUseAcc(n)=1
+	shotDrill(n)=1
+	shotImuneTime(n)=30
+	shotUturn(n)=1
+	shotAcc(n)=.2 ;2
+	shotMaxSpeed(n)=shotSpeed(n)
+	shotChunkType(n)=5
+	shotPic(n,1)=shotImage(26)
+	shotPic_(n,1)=shotImage(26)
+	shotPic(n,2)=shotImage(27)
+	shotPic_(n,2)=shotImage(27)
+	shotFramesAmount(n)=2
+	shotFrameTime(n)=2
+	shotSound(n)=slashSnd
+
+Case 23	;missile (hitMode=0)
+	shotspeed(n)=6
+	shotsize(n)=15
+	shotheight(n)=6
+	shotSide(n)=shotsize(n)/2
+	shotdamage(n)=2
+	shotHitMode(n)=0
+	shotImpact(n)=40
+	shotDuration(n)=9999
+	shotMaxSpeed(n)=shotSpeed(n)
+	shotChunkType(n)=7
+	shotPic(n,1)=shotImage(28)
+	shotPic_(n,1)=shotImage_(28)
+	shotSound(n)=noSnd
+	shotHitTrail(n)=1
+	shotTrailType(n)=1
+	shotExplosive(n)=1
+
+Case 24	;big laser
+	shotspeed(n)=7
+	shotsize(n)=40
+	shotheight(n)=4
+	shotSide(n)=shotsize(n)/2
+	shotdamage(n)=10
+	shotHitXspeed(n)=4
+	shotHitYspeed(n)=2
+	shotFallTime(n)=40
+	shotHitMode(n)=0
+	shotImpact(n)=10
+	shotDuration(n)=100
+	shotMaxSpeed(n)=shotSpeed(n)
+	shotChunkType(n)=7
+	shotPic(n,1)=shotImage(29)
+	shotPic_(n,1)=shotImage_(29)
+	shotSound(n)=firehitsnd
+	shotHitTrail(n)=1
+
+Case 25	;ray blue ball
+	shotspeed(n)=4
+	shotsize(n)=14
+	shotheight(n)=12
+	shotSide(n)=shotsize(n)/2
+	shotdamage(n)=6
+	shotHitXspeed(n)=5
+	shotHitYspeed(n)=3
+	shotFallTime(n)=60
+	shotHitMode(n)=2
+	shotImpact(n)=15
+	shotDuration(n)=300
+	shotMaxSpeed(n)=shotSpeed(n)
+	shotChunkType(n)=30
+	shotPic(n,1)=shotImage(30)
+	shotPic_(n,1)=shotImage(30)
+	shotPic(n,2)=shotImage(31)
+	shotPic_(n,2)=shotImage(31)
+	shotFramesAmount(n)=2
+	shotFrameTime(n)=3
+	shotSound(n)=shockSnd
+	shotHitTrail(n)=4
+
+Case 26	;evil black missile
+	shotspeed(n)=4
+	shotsize(n)=16
+	shotheight(n)=14
+	shotSide(n)=shotsize(n)/2
+	shotdamage(n)=7
+	shotHitXspeed(n)=5
+	shotHitYspeed(n)=3
+	shotFallTime(n)=60
+	shotHitMode(n)=0
+	shotImpact(n)=15
+	shotDuration(n)=600
+	shotMaxSpeed(n)=shotSpeed(n)
+	shotChunkType(n)=20
+	shotPic(n,1)=shotImage(32)
+	shotPic_(n,1)=shotImage_(32)
+	shotSound(n)=marioFierceSnd
+
+Case 27	;cannon ball
+	shotspeed(n)=4
+	shotsize(n)=12
+	shotheight(n)=12
+	shotSide(n)=shotsize(n)/2
+	shotdamage(n)=7
+	shotHitXspeed(n)=5
+	shotHitYspeed(n)=3
+	shotFallTime(n)=60
+	shotHitMode(n)=0
+	shotImpact(n)=15
+	shotDuration(n)=600
+	shotMaxSpeed(n)=shotSpeed(n)
+	shotChunkType(n)=20
+	shotPic(n,1)=shotImage(33)
+	shotPic_(n,1)=shotImage(33)
+	shotSound(n)=marioFierceSnd
+
+Case 28	;Goku ball
+	shotspeed(n)=3
+	shotsize(n)=16
+	shotheight(n)=10
+	shotSide(n)=shotsize(n)/2
+	shotdamage(n)=5
+	shotHitXspeed(n)=4
+	shotHitYspeed(n)=1.5
+	shotFallTime(n)=40
+	shotImpact(n)=16
+	shotDuration(n)=50
+	shotMaxSpeed(n)=shotSpeed(n)
+	shotChunkType(n)=3
+	shotPic(n,1)=shotImage(34)
+	shotPic_(n,1)=shotImage_(34)
+	shotPic(n,2)=shotImage(35)
+	shotPic_(n,2)=shotImage_(35)
+	shotFramesAmount(n)=2
+	shotFrameTime(n)=3
+	shotSound(n)=highPunchSnd
+
+Case 29	;Ritcher cross
+	shotspeed(n)=4
+	shotsize(n)=20
+	shotheight(n)=18
+	shotSide(n)=shotsize(n)/2
+	shotdamage(n)=4
+	shotHitMode(n)=2
+	shotHitXspeed(n)=4
+	shotHitYspeed(n)=2
+	shotFallTime(n)=40
+	shotDuration(n)=30
+	shotDuration2(n)=150
+	shotFollowOwner(n)=0
+	shotBounce(n)=1
+	shotTrailType(n)=2
+	shotUseAcc(n)=1
+	shotDrill(n)=1
+	shotImuneTime(n)=30
+	shotUturn(n)=1
+	shotAcc(n)=.2
+	shotMaxSpeed(n)=shotSpeed(n)
+	shotChunkType(n)=10
+	shotFramesAmount(n)=4
+	shotPic(n,1)=shotImage(36)
+	shotPic_(n,1)=shotImage(36)
+	shotPic(n,2)=shotImage(37)
+	shotPic_(n,2)=shotImage(37)
+	shotPic(n,3)=shotImage(36)
+	shotPic_(n,3)=shotImage(36)
+	shotPic(n,4)=shotImage(37)
+	shotPic_(n,4)=shotImage(37)
+	shotFrameTime(n)=8
+	shotSound(n)=mikepunchSnd
+	
+Case 30	;Ritcher sword
+	shotspeed(n)=8
+	shotsize(n)=40
+	shotheight(n)=2
+	shotSide(n)=shotsize(n)/2
+	shotdamage(n)=4
+	shotImuneTime(n)=2
+	shotHitXspeed(n)=2
+	shotHitYspeed(n)=1.5
+	shotFallTime(n)=40
+	shotDuration(n)=100
+	shotMaxSpeed(n)=shotSpeed(n)
+	shotChunkType(n)=50
+	shotPic(n,1)=shotImage(38)
+	shotPic_(n,1)=shotImage_(38)
+	shotSound(n)=mikePunchSnd
+
+End Select
+
+End Function
+;----------------- Chunks ---------------------------------
+Function chunks(n)
+
+chunkSeq(n)=chunkSeq(n)+1
+cc=chunkType(n)
+Select chunkType(n)
+Case 0: a=5:b=10:c=14	;test
+	If chunkSeq(n) => 1 And chunkSeq(n) =< a Then chunkPic(n)= ptPic(3,1):chunkPic_(n)= ptPic(3,1)
+	If chunkSeq(n) => a And chunkSeq(n) =< b Then chunkPic(n)= ptPic(3,1):chunkPic_(n)= ptPic(3,1)
+	If chunkSeq(n) => b And chunkSeq(n) =< c Then chunkPic(n)= ptPic(3,1):chunkPic_(n)= ptPic(3,1)
+	If chunkSeq(n) > c Then chunk(n)=0
+
+Case 1: a=5:b=10:c=14	;Blocking
+	If chunkSeq(n) => 1 And chunkSeq(n) =< a Then chunkPic(n)= ptPic(3,1):chunkPic_(n)= ptPic(3,1)
+	If chunkSeq(n) => a And chunkSeq(n) =< b Then chunkPic(n)= ptPic(cc,1):chunkPic_(n)= ptPic(cc,1)
+	If chunkSeq(n) => b And chunkSeq(n) =< c Then chunkPic(n)= ptPic(cc,2):chunkPic_(n)= ptPic(cc,2)
+	If chunkSeq(n) > c Then chunk(n)=0
+
+Case 2: a=30:b=100:c=180:d=240		;Round Introduction
+	If chunkSeq(n) < b Then chunkPic(n)=ptPic(cc,1):chunkPic_(n)=ptPic(cc,1)
+	If chunkSeq(n) => b Then chunkPic(n)=ptPic(cc,2):chunkPic_(n)=ptPic(cc,2)
+	If chunkSeq(n) =a Then
+		If gameSound Then PlaySound readySnd
+	EndIf
+
+	If chunkSeq(n) => 1 And chunkSeq(n) =< a Then ychunk(n)=ychunk(n)+10
+	If chunkSeq(n) > a And chunkSeq(n) =< b Then q=0
+	If chunkSeq(n) > b And chunkSeq(n) =< c Then q=0
+	If chunkSeq(n) = c Then
+		FlushKeys:FlushJoy
+		If gameSound Then PlaySound fightSnd
+	EndIf
+	If chunkSeq(n) > c And chunkSeq(n) =< d Then ychunk(n)=ychunk(n)-10:NoUserInput=0
+	If chunkSeq(n) > d Then chunk(n)=0
+
+Case 3: a=10:b=20		;ryu blue ball impact
+	If chunkSeq(n) => 1 And chunkSeq(n) =< a Then chunkPic(n)=ptPic(cc,1):chunkPic_(n)=ptPic(cc,1)
+	If chunkSeq(n) > a And chunkSeq(n) =< b Then chunkPic(n)=ptPic(cc,2):chunkPic_(n)=ptPic(cc,2)
+	If chunkSeq(n) > b Then chunk(n)=0
+
+Case 4: a=5:b=10:c=15:d=20	;explosion 40
+	If chunkSeq(n) => 1 And chunkSeq(n) =< a Then chunkPic(n)=ptPic(cc,1):chunkPic_(n)=ptPic(cc,1)
+	If chunkSeq(n) > a And chunkSeq(n) =< b Then chunkPic(n)=ptPic(cc,2):chunkPic_(n)=ptPic(cc,2)
+	If chunkSeq(n) > b And chunkSeq(n) =< c Then chunkPic(n)=ptPic(cc,1):chunkPic_(n)=ptPic(cc,1)
+	If chunkSeq(n) > c And chunkSeq(n) =< d Then chunkPic(n)=ptPic(cc,2):chunkPic_(n)=ptPic(cc,2)
+	If chunkSeq(n) > d Then chunk(n)=0:
+
+Case 5: a=5:b=10:c=15		;white star hit
+	If chunkSeq(n) => 1 And chunkSeq(n) =< a Then chunkPic(n)= ptPic(cc,1):chunkPic_(n)=ptPic(cc,1)
+	If chunkSeq(n) > a And chunkSeq(n) =< b Then chunkPic(n)=ptPic(cc,2):chunkPic_(n)=ptPic(cc,2)
+	If chunkSeq(n) > b And chunkSeq(n) =< c Then chunkPic(n)=ptPic(cc,3):chunkPic_(n)=ptPic(cc,3)
+	If chunkSeq(n) > c Then chunk(n)=0
+
+Case 6: a=10:b=20		;web shot impact
+	If chunkSeq(n) => 1 And chunkSeq(n) =< a Then chunkPic(n)=ptPic(cc,1):chunkPic_(n)=ptPic_(cc,1)
+	If chunkSeq(n) > a And chunkSeq(n) =< b Then chunkPic(n)=ptPic(cc,2):chunkPic_(n)=ptPic_(cc,2)
+	If chunkSeq(n) > b Then chunk(n)=0
+
+Case 7: a=10:b=20		;fire ball impact
+	If chunkSeq(n) => 1 And chunkSeq(n) =< a Then chunkPic(n)=ptPic(cc,1):chunkPic_(n)=ptPic(cc,1)
+	If chunkSeq(n) > a And chunkSeq(n) =< b Then chunkPic(n)=ptPic(cc,2):chunkPic_(n)=ptPic(cc,2)
+	If chunkSeq(n) > b Then chunk(n)=0
+
+Case 8: a=3:b=6:c=9		;coins
+	If chunkSeq(n) => 1 And chunkSeq(n) =< a Then chunkPic(n)=ptPic(cc,1):chunkPic_(n)=ptPic(cc,1)
+	If chunkSeq(n) > a And chunkSeq(n) =< b Then chunkPic(n)=ptPic(cc,2):chunkPic_(n)=ptPic(cc,2)
+	If chunkSeq(n) > b And chunkSeq(n) =< c Then chunkPic(n)=ptPic(cc,3):chunkPic_(n)=ptPic(cc,3)
+	If chunkSeq(n) > c Then chunk(n)=0
+
+Case 9: a=10:b=17		;lava rock breaking
+	If chunkSeq(n) => 1 And chunkSeq(n) =< a Then chunkPic(n)=ptPic(cc,1):chunkPic_(n)=ptPic(cc,1)
+	If chunkSeq(n) > a And chunkSeq(n) =< b Then chunkPic(n)=ptPic(cc,2):chunkPic_(n)=ptPic(cc,2)
+	If chunkSeq(n) > b Then chunk(n)=0
+
+Case 10: a=3:b=6:c=9		;M vs C hit
+	If chunkSeq(n) => 1 And chunkSeq(n) =< a Then chunkPic(n)= ptPic(cc,1):chunkPic_(n)=ptPic(cc,1)
+	If chunkSeq(n) > a And chunkSeq(n) =< b Then chunkPic(n)= ptPic(cc,2) :chunkPic_(n)=ptPic(cc,2)
+	If chunkSeq(n) > b And chunkSeq(n) =< c Then chunkPic(n)= ptPic(cc,3) :chunkPic_(n)=ptPic(cc,3)
+	If chunkSeq(n) > c Then chunk(n)=0
+
+Case 11: a=10:b=25:c=35		;vulcano explosion
+	If chunkSeq(n) => 1 And chunkSeq(n) =< a Then chunkPic(n)=ptPic(cc,1):chunkPic_(n)=ptPic(cc,1)
+	If chunkSeq(n) > a And chunkSeq(n) =< b Then chunkPic(n)=ptPic(cc,2):chunkPic_(n)=ptPic(cc,2)
+	If chunkSeq(n) > b And chunkSeq(n) =< c Then chunkPic(n)=ptPic(cc,2):chunkPic_(n)=ptPic(cc,2)
+	If chunkSeq(n) > c Then chunk(n)=0
+
+Case 12: a=5:b=10:c=14	;air Trail going up
+	yChunk(n)=yChunk(n)-1
+	If chunkSeq(n) => 1 And chunkSeq(n) =< a Then chunkPic(n)= ptPic(1,2):chunkPic_(n)= ptPic(1,2)
+	If chunkSeq(n) => a And chunkSeq(n) =< b Then chunkPic(n)= ptPic(1,2):chunkPic_(n)= ptPic(1,2)
+	If chunkSeq(n) => b And chunkSeq(n) =< c Then chunkPic(n)= ptPic(1,2):chunkPic_(n)= ptPic(1,2)
+	If chunkSeq(n) > c Then chunk(n)=0
+
+Case 13: a=7			;bright dot
+	If chunkSeq(n) => 1 And chunkSeq(n) =< a Then chunkPic(n)= ptPic(cc,1):chunkPic_(n)=ptPic(cc,1)
+	If chunkSeq(n) > a Then chunk(n)=0
+
+Case 14: a=6:b=12		;blood
+	If chunkSeq(n) => 1 And chunkSeq(n) =< a Then chunkPic(n)= ptPic(cc,1):ChunkPic_(n)=ptPic(cc,1)
+	If chunkSeq(n) > a And chunkSeq(n) =< b Then chunkPic(n)=ptPic(cc,2):chunkPic_(n)=ptPic(cc,2)
+	If chunkSeq(n) > b Then chunk(n)=0
+
+Case 15: a=5:b=10:c=14	;Green pick up sign
+	If chunkSeq(n) => 1 And chunkSeq(n) =< a Then chunkPic(n)= ptPic(cc,1):chunkPic_(n)= ptPic(cc,1)
+	If chunkSeq(n) => a And chunkSeq(n) =< b Then chunkPic(n)= ptPic(cc,2):chunkPic_(n)= ptPic(cc,2)
+	If chunkSeq(n) => b And chunkSeq(n) =< c Then chunkPic(n)= ptPic(cc,3):chunkPic_(n)= ptPic(cc,3)
+	If chunkSeq(n) > c Then chunk(n)=0
+Case 16: a=5:b=10:c=14	;smoke
+	If chunkSeq(n) => 1 And chunkSeq(n) =< a Then chunkPic(n)= ptPic(cc,1):chunkPic_(n)= ptPic(cc,1)
+	If chunkSeq(n) => a And chunkSeq(n) =< b Then chunkPic(n)= ptPic(cc,2):chunkPic_(n)= ptPic(cc,2)
+	If chunkSeq(n) => b And chunkSeq(n) =< c Then chunkPic(n)= ptPic(cc,3):chunkPic_(n)= ptPic(cc,3)
+	If chunkSeq(n) > c Then chunk(n)=0
+
+Case 17: a=1:b=2	;red ray impact
+	If chunkSeq(n) => 1 And chunkSeq(n) =< a Then chunkPic(n)= ptPic(cc,1):chunkPic_(n)= ptPic_(cc,1)
+	If chunkSeq(n) => a And chunkSeq(n) =< b Then chunkPic(n)= ptPic(cc,2):chunkPic_(n)= ptPic_(cc,2)
+	If chunkSeq(n) > b Then chunk(n)=0
+
+Case 18: a=5:b=10:c=14	;blueRay
+	If chunkSeq(n) = 1 Then chunkPic(n)= ptPic(cc,1):chunkPic_(n)= ptPic(cc,1)
+	If chunkSeq(n) > 1 Then chunk(n)=0
+Case 19: a=5:b=10:c=14	;blueRay 2
+	If chunkSeq(n) = 1 Then chunkPic(n)= ptPic(cc,1):chunkPic_(n)= ptPic(cc,1)
+	If chunkSeq(n) > 1 Then chunk(n)=0
+
+Case 20: a=5:b=10:c=15		;rash hit
+	If chunkSeq(n) => 1 And chunkSeq(n) =< a Then chunkPic(n)=ptPic(cc,1):chunkPic_(n)=ptPic(cc,1)
+	If chunkSeq(n) > a And chunkSeq(n) =< b Then chunkPic(n)=ptPic(cc,2):chunkPic_(n)=ptPic(cc,2)
+	If chunkSeq(n) > b And chunkSeq(n) =< c Then chunkPic(n)=ptPic(cc,3):chunkPic_(n)=ptPic(cc,3)
+	If chunkSeq(n) > c Then chunk(n)=0
+
+Case 21: a=5:b=10:c=14	;blueRay Impact
+	If chunkSeq(n) = 1 Then chunkPic(n)= ptPic(cc,1):chunkPic_(n)= ptPic_(cc,1)
+	If chunkSeq(n) > 1 Then chunk(n)=0
+Case 22: a=5:b=10:c=14	;blueRay Impact 2
+	If chunkSeq(n) = 1 Then chunkPic(n)= ptPic(cc,1):chunkPic_(n)= ptPic_(cc,1)
+	If chunkSeq(n) > 1 Then chunk(n)=0
+
+Case 23: a=5:b=10:c=14	;Power ball
+	If chunkSeq(n) = 1 Then chunkPic(n)= ptPic(cc,1):chunkPic_(n)= ptPic(cc,1)
+	If chunkSeq(n) > 1 Then chunk(n)=0
+
+Case 24: a=2:b=5:c=9	;fire going up
+	If chunkSeq(n) => 1 And chunkSeq(n) =< a Then chunkPic(n)=ptPic(cc,1):chunkPic_(n)=ptPic(cc,1):yChunk(n)=yChunk(n)-1
+	If chunkSeq(n) > a And chunkSeq(n) =< b Then chunkPic(n)=ptPic(cc,2):chunkPic_(n)=ptPic(cc,2):yChunk(n)=yChunk(n)-1
+	If chunkSeq(n) > b Then chunk(n)=0
+
+Case 25: a=2:b=5:c=9:d=12	;4 way explosion
+	If chunkSeq(n) => 1 And chunkSeq(n) =< a Then chunkPic(n)=ptPic(cc,1):chunkPic_(n)=ptPic(cc,1)
+	If chunkSeq(n) > a And chunkSeq(n) =< b Then chunkPic(n)=ptPic(cc,2):chunkPic_(n)=ptPic(cc,2)
+	If chunkSeq(n) > b And chunkSeq(n) =< c Then chunkPic(n)=ptPic(cc,3):chunkPic_(n)=ptPic(cc,3)
+	If chunkSeq(n) > c And chunkSeq(n) =< d Then chunkPic(n)=ptPic(cc,4):chunkPic_(n)=ptPic(cc,4)
+	If chunkSeq(n) > d Then chunk(n)=0
+
+Case 26: a=5:b=5:c=9:d=12	;batman bomb smoke
+	If chunkSeq(n) => 1 And chunkSeq(n) =< a Then chunkPic(n)=ptPic(cc,1):chunkPic_(n)=ptPic(cc,1)
+	If chunkSeq(n) > a And chunkSeq(n) =< b Then chunkPic(n)=ptPic(cc,2):chunkPic_(n)=ptPic(cc,2)
+	If chunkSeq(n) > b And chunkSeq(n) =< c Then chunkPic(n)=ptPic(cc,3):chunkPic_(n)=ptPic(cc,3)
+	If chunkSeq(n) > c And chunkSeq(n) =< d Then chunkPic(n)=ptPic(cc,4):chunkPic_(n)=ptPic(cc,4)
+	If chunkSeq(n) > d Then chunk(n)=0
+
+Case 27: a=8:b=16	;green ray impact
+	If chunkSeq(n) => 1 And chunkSeq(n) =< a Then chunkPic(n)=ptPic(cc,1):chunkPic_(n)=ptPic(cc,1)
+	If chunkSeq(n) > a And chunkSeq(n) =< b Then chunkPic(n)=ptPic(cc,2):chunkPic_(n)=ptPic_(cc,2)
+	If chunkSeq(n) > b Then chunk(n)=0
+
+Case 28: a=5:b=10:c=15	;little smoke
+	If chunkSeq(n) => 1 And chunkSeq(n) =< a Then chunkPic(n)=ptPic(cc,1):chunkPic_(n)=ptPic(cc,1)
+	If chunkSeq(n) > a And chunkSeq(n) =< b Then chunkPic(n)=ptPic(cc,2):chunkPic_(n)=ptPic(cc,2)
+	If chunkSeq(n) > b And chunkSeq(n) =< c Then chunkPic(n)=ptPic(cc,3):chunkPic_(n)=ptPic(cc,3)
+	If chunkSeq(n) > c Then chunk(n)=0
+
+Case 29: a=5:b=10:c=15	;little smoke going up
+	If chunkSeq(n) => 1 And chunkSeq(n) =< a Then chunkPic(n)=ptPic(28,1):chunkPic_(n)=ptPic(28,1):yChunk(n)=yChunk(n)-1
+	If chunkSeq(n) > a And chunkSeq(n) =< b Then chunkPic(n)=ptPic(28,2):chunkPic_(n)=ptPic(28,2):yChunk(n)=yChunk(n)-1
+	If chunkSeq(n) > b And chunkSeq(n) =< c Then chunkPic(n)=ptPic(28,3):chunkPic_(n)=ptPic(28,3)
+	If chunkSeq(n) > c Then chunk(n)=0
+
+Case 30: a=5:b=10:c=15	;Ray ball impact
+	If chunkSeq(n) => 1 And chunkSeq(n) =< a Then chunkPic(n)=ptPic(29,1):chunkPic_(n)=ptPic(29,1)
+	If chunkSeq(n) > a And chunkSeq(n) =< b Then chunkPic(n)=ptPic(29,2):chunkPic_(n)=ptPic(29,2)
+	If chunkSeq(n) > b And chunkSeq(n) =< c Then chunkPic(n)=ptPic(29,3):chunkPic_(n)=ptPic(29,3)
+	If chunkSeq(n) > c Then chunk(n)=0
+
+Case 31: a=4:b=8:c=12	;electricity
+	If chunkSeq(n) => 1 And chunkSeq(n) =< a Then chunkPic(n)=ptPic(30,1):chunkPic_(n)=ptPic(30,1)
+	If chunkSeq(n) > a And chunkSeq(n) =< b Then chunkPic(n)=ptPic(30,2):chunkPic_(n)=ptPic(30,2)
+	If chunkSeq(n) > b And chunkSeq(n) =< c Then chunkPic(n)=ptPic(30,3):chunkPic_(n)=ptPic(30,3)
+	If chunkSeq(n) > c Then chunk(n)=0
+
+Case 32: a=5:b=10:c=14	;Red Ray
+	If chunkSeq(n) = 1 Then chunkPic(n)= ptPic(31,1):chunkPic_(n)= ptPic(31,1)
+	If chunkSeq(n) > 1 Then chunk(n)=0
+Case 33: a=5:b=10:c=14	;Red Ray 2
+	If chunkSeq(n) = 1 Then chunkPic(n)= ptPic(32,1):chunkPic_(n)= ptPic(32,1)
+	If chunkSeq(n) > 1 Then chunk(n)=0
+
+Case 34: a=6:b=12		;big rock breaking
+	If chunkSeq(n) => 1 And chunkSeq(n) =< a Then chunkPic(n)=ptPic(33,1):chunkPic_(n)=ptPic(33,1)
+	If chunkSeq(n) > a And chunkSeq(n) =< b Then chunkPic(n)=ptPic(33,2):chunkPic_(n)=ptPic(33,2)
+	If chunkSeq(n) > b Then chunk(n)=0
+
+Case 35: a=6:b=12		;little rock breaking
+	If chunkSeq(n) => 1 And chunkSeq(n) =< a Then chunkPic(n)=ptPic(34,1):chunkPic_(n)=ptPic(34,1)
+	If chunkSeq(n) > a And chunkSeq(n) =< b Then chunkPic(n)=ptPic(34,2):chunkPic_(n)=ptPic(34,2)
+	If chunkSeq(n) > b Then chunk(n)=0
+
+Case 36: a=5:b=10:c=15:d=20:e=25:f=30		;water splash
+	If chunkSeq(n) => 1 And chunkSeq(n) =< a Then chunkPic(n)=ptPic(35,1):chunkPic_(n)=ptPic(35,1)
+	If chunkSeq(n) > a And chunkSeq(n) =< b Then chunkPic(n)=ptPic(35,2):chunkPic_(n)=ptPic(35,2)
+	If chunkSeq(n) > b And chunkSeq(n) =< c Then chunkPic(n)=ptPic(35,3):chunkPic_(n)=ptPic(35,3)
+	If chunkSeq(n) > c And chunkSeq(n) =< d Then chunkPic(n)=ptPic(35,4):chunkPic_(n)=ptPic(35,4)
+	If chunkSeq(n) > d And chunkSeq(n) =< e Then chunkPic(n)=ptPic(35,5):chunkPic_(n)=ptPic(35,5)
+	If chunkSeq(n) > e And chunkSeq(n) =< f Then chunkPic(n)=ptPic(35,6):chunkPic_(n)=ptPic(35,6)
+	If chunkSeq(n) > f Then chunk(n)=0
+
+Case 37: a=5:b=10:c=20		;big web
+	If chunkSeq(n) => 1 And chunkSeq(n) =< a Then chunkPic(n)= zpic(3,10,3):chunkPic_(n)=zpic(3,10,3)
+	If chunkSeq(n) > a And chunkSeq(n) =< b Then chunkPic(n)=zpic(3,10,4):chunkPic_(n)=zpic(3,10,4)
+	If chunkSeq(n) > b And chunkSeq(n) =< c Then chunkPic(n)=zpic(3,10,5):chunkPic_(n)=zpic(3,10,5)
+	If chunkSeq(n) > c Then chunk(n)=0
+
+Case 38: 	;yellow ray
+	If chunkSeq(n) = 1 Then chunkPic(n)= ptPic(36,1):chunkPic_(n)= ptPic(36,1)
+	If chunkSeq(n) > 1 Then chunk(n)=0
+Case 39: 	;yellow ray 2
+	If chunkSeq(n) = 1 Then chunkPic(n)= ptPic(37,1):chunkPic_(n)= ptPic(37,1)
+	If chunkSeq(n) > 1 Then chunk(n)=0
+Case 51: 	;yellow Ray Impact
+	If chunkSeq(n) = 1 Then chunkPic(n)= ptPic(38,1):chunkPic_(n)= ptPic_(38,1)
+	If chunkSeq(n) > 1 Then chunk(n)=0
+Case 52: 	;yellow Ray Impact 2
+	If chunkSeq(n) = 1 Then chunkPic(n)= ptPic(39,1):chunkPic_(n)= ptPic_(39,1)
+	If chunkSeq(n) > 1 Then chunk(n)=0
+
+
+Case 40:a=10	;tutorial 1 - double jump
+	
+	message=1 : messageN=n
+	chunkCategory(n)=2
+	chunkPic(n)= noPic:chunkPic_(n)= noPic
+	If chunkSeq(n) => 1 And chunkSeq(n) =< a Then
+		ln=1 
+		chunkStr$(n,ln)=strInfo$(67):ln=ln+1
+		chunkStr$(n,ln)=strInfo$(68)
+		chunkLines(n)=ln
+		chunkWidth(n)=500:chunkHeight(n)=(25 * ln)
+	EndIf
+	If chunkSeq(n) = 3 Then
+		Delay 1000
+		waitInput()
+		chunk(n)=0
+		message=0
+		tutorial(1)=1
+	EndIf
+    If tutorial(1)=1 Then chunk(n)=0:message=0
+
+Case 41:a=10	;tutorial 2 - up special
+	message=1 : messageN=n
+	chunkCategory(n)=2
+	chunkPic(n)= noPic:chunkPic_(n)= noPic
+	If chunkSeq(n) => 1 And chunkSeq(n) =< a Then
+		ln=1 
+		chunkStr$(n,ln)=strInfo$(69):ln=ln+1
+		chunkStr$(n,ln)=strInfo$(70):ln=ln+1
+		chunkStr$(n,ln)=strInfo$(71)
+		chunkLines(n)=ln
+		chunkWidth(n)=500:chunkHeight(n)=(25 * ln)
+	EndIf
+	If chunkSeq(n) = 3 Then
+		Delay 1000
+		waitInput()
+		chunk(n)=0
+		message=0
+		tutorial(2)=1
+	EndIf
+   	If tutorial(2)=1 Then chunk(n)=0:message=0
+   	
+Case 42:a=10	;tutorial 3 - fight
+    message=1 : messageN=n
+	chunkCategory(n)=2
+	chunkPic(n)= noPic:chunkPic_(n)= noPic
+	If chunkSeq(n) => 1 And chunkSeq(n) =< a Then
+		ln=1
+		chunkStr$(n,ln)=strInfo$(72):ln=ln+1
+		chunkStr$(n,ln)=strInfo$(73):ln=ln+1
+		chunkStr$(n,ln)=strInfo$(74):ln=ln+1
+		chunkStr$(n,ln)=strInfo$(75)
+		chunkLines(n)=ln
+		chunkWidth(n)=460:chunkHeight(n)=(25 * ln)
+	EndIf
+	If chunkSeq(n) = 3 Then
+		Delay 1000
+		waitInput()
+		chunk(n)=0
+		message=0
+		tutorial(3)=1
+	EndIf
+	If tutorial(3)=1 Then chunk(n)=0:message=0
+ 
+Case 43:a=10	;tutorial 4 - use switch
+    message=1 : messageN=n
+	chunkCategory(n)=2
+	chunkPic(n)= noPic:chunkPic_(n)= noPic
+	If chunkSeq(n) => 1 And chunkSeq(n) =< a Then
+		ln=1
+		chunkStr$(n,ln)=strInfo$(76):ln=ln+1
+		chunkStr$(n,ln)=strInfo$(77)
+		chunkLines(n)=ln
+		chunkWidth(n)=460:chunkHeight(n)=(25 * ln)
+	EndIf
+	If chunkSeq(n) = 3 Then
+		Delay 1000
+		waitInput()
+		chunk(n)=0
+		message=0
+		tutorial(4)=1
+	EndIf
+	If tutorial(4)=1 Then chunk(n)=0:message=0
+	
+Case 44:a=10	;tutorial 5 - pick up item
+	message=1 : messageN=n
+	chunkCategory(n)=2
+	chunkPic(n)= noPic:chunkPic_(n)= noPic
+	If chunkSeq(n) => 1 And chunkSeq(n) =< a Then
+		ln=1
+		chunkStr$(n,ln)=strInfo$(78):ln=ln+1
+		chunkStr$(n,ln)=strInfo$(79):ln=ln+1
+		chunkStr$(n,ln)=strInfo$(80):ln=ln+1
+		chunkStr$(n,ln)=strInfo$(81)
+		chunkLines(n)=ln
+		chunkWidth(n)=460:chunkHeight(n)=(25 * ln)
+	EndIf
+	If chunkSeq(n) = 3 Then
+		Delay 1000
+		waitInput()
+		chunk(n)=0
+		message=0
+		tutorial(5)=1
+	EndIf
+	If tutorial(5)=1 Then chunk(n)=0:message=0
+	
+Case 45:a=10	;tutorial 6 - go down from platform
+	message=1 : messageN=n
+	chunkCategory(n)=2
+	chunkPic(n)= noPic:chunkPic_(n)= noPic
+	If chunkSeq(n) => 1 And chunkSeq(n) =< a Then
+		ln=1
+		chunkStr$(n,ln)=strInfo$(82):ln=ln+1
+		chunkStr$(n,ln)=strInfo$(83):ln=ln+1
+		chunkStr$(n,ln)=strInfo$(84)
+		chunkLines(n)=ln
+		chunkWidth(n)=460:chunkHeight(n)=(25 * ln)
+	EndIf
+	If chunkSeq(n) = 3 Then
+		Delay 1000
+		waitInput()
+		chunk(n)=0
+		message=0
+		tutorial(6)=1
+	EndIf
+	If tutorial(6)=1 Then chunk(n)=0:message=0
+	
+Case 46:a=10	;tutorial 7 - throw item dioganally
+    message=1 : messageN=n
+	chunkCategory(n)=2
+	chunkPic(n)= noPic:chunkPic_(n)= noPic
+	If chunkSeq(n) => 1 And chunkSeq(n) =< a Then
+		ln=1
+		chunkStr$(n,ln)=strInfo$(85):ln=ln+1
+		chunkStr$(n,ln)=strInfo$(86):ln=ln+1
+		chunkStr$(n,ln)=strInfo$(87):ln=ln+1
+ 		chunkStr$(n,ln)=strInfo$(88):ln=ln+1
+		chunkStr$(n,ln)=strInfo$(89)
+		chunkLines(n)=ln
+		chunkWidth(n)=460:chunkHeight(n)=(25 * ln)
+	EndIf
+	If chunkSeq(n) = 3 Then
+		Delay 1000
+		waitInput()
+		chunk(n)=0
+		message=0
+		tutorial(7)=1
+	EndIf
+	If tutorial(7)=1 Then chunk(n)=0:message=0
+
+Case 47:a=10	;tutorial 8 - super special
+    message=1 : messageN=n
+	chunkCategory(n)=2
+	chunkPic(n)= noPic:chunkPic_(n)= noPic
+	If chunkSeq(n) => 1 And chunkSeq(n) =< a Then
+		ln=1
+		chunkStr$(n,ln)=strInfo$(90):ln=ln+1
+		chunkStr$(n,ln)=strInfo$(91):ln=ln+1
+		chunkStr$(n,ln)=strInfo$(92):ln=ln+1
+		chunkStr$(n,ln)=strInfo$(93)
+		chunkLines(n)=ln
+		chunkWidth(n)=560:chunkHeight(n)=(25 * ln)
+	EndIf
+	If chunkSeq(n) = 3 Then
+		Delay 1000
+		waitInput()
+		chunk(n)=0
+		message=0
+		tutorial(8)=1
+	EndIf
+	If tutorial(8)=1 Then chunk(n)=0:message=0
+
+Case 48 ;special event for level #50, in the beginning, set Venom life according to amount of players
+		;Delay item respawn from factory #2
+    chunkPic(n)=ptPic(35,1):chunkPic_(n)=ptPic(35,1)
+	If chunkSeq(n)=1 Then
+      Select zamountPlaying
+		Case 2:zLife(5)=zLife(5)+50
+		Case 3:zLife(5)=zLife(5)+100
+		Case 4:zLife(5)=zLife(5)+150
+      End Select
+	EndIf
+	If chunkSeq(n) > 100 Then chunkSeq(n)=2
+	If objAmount => 2 Then FdelaySeq(2) = FdelaySeq(2)-1
+
+Case 49:a=200	;no air special allowed
+    message=1 : messageN=n
+	chunkCategory(n)=2
+	chunkPic(n)= noPic:chunkPic_(n)= noPic
+	If chunkSeq(n) => 1 And chunkSeq(n) =< a Then
+		ln=1
+		chunkStr$(n,ln)=strInfo$(94)
+		chunkLines(n)=ln
+		chunkWidth(n)=420:chunkHeight(n)=(25 * ln)
+	EndIf
+	If chunkSeq(n) = 200 Then
+		tutorial(9)=1 : chunk(n)=0 : message=0
+	EndIf
+	If tutorial(9)=1 Then chunk(n)=0:message=0
+
+
+Case 50: a=7:b=15		;TMNT hit
+	If chunkSeq(n) => 1 And chunkSeq(n) =< a Then chunkPic(n)=ptPic(cc,1):chunkPic_(n)=ptPic(cc,1)
+	If chunkSeq(n) > a And chunkSeq(n) =< b Then chunkPic(n)=ptPic(cc,2):chunkPic_(n)=ptPic(cc,2)
+	If chunkSeq(n) > b Then chunk(n)=0
+
+Case 53: 		;Whip
+	chunkPic(n)=ptPic(40,1):chunkPic_(n)=ptPic_(40,1)
+	If chunkSeq(n) > 1 Or zhit(chunkOwner(n))=1 Then chunk(n)=0
+Case 54: 		;Whip
+	chunkPic(n)=ptPic(40,2):chunkPic_(n)=ptPic_(40,2)
+	If chunkSeq(n) > 1 Or zhit(chunkOwner(n))=1 Then chunk(n)=0
+Case 55: 		;Whip
+	chunkPic(n)=ptPic(40,3):chunkPic_(n)=ptPic_(40,3)
+	If chunkSeq(n) > 1 Or zhit(chunkOwner(n))=1 Then chunk(n)=0
+Case 56: 		;Whip
+	chunkPic(n)=ptPic(40,4):chunkPic_(n)=ptPic_(40,4)
+	If chunkSeq(n) > 1 Or zhit(chunkOwner(n))=1 Then chunk(n)=0
+Case 57: 		;Whip
+	chunkPic(n)=ptPic(40,5):chunkPic_(n)=ptPic_(40,5)
+	If chunkSeq(n) > 1 Or zhit(chunkOwner(n))=1 Then chunk(n)=0
+Case 58: 		;Whip
+	chunkPic(n)=ptPic(40,6):chunkPic_(n)=ptPic_(40,6)
+	If chunkSeq(n) > 1 Or zhit(chunkOwner(n))=1 Then chunk(n)=0
+Case 59: 		;Whip
+	chunkPic(n)=ptPic(40,7):chunkPic_(n)=ptPic_(40,7)
+	If chunkSeq(n) > 1 Or zhit(chunkOwner(n))=1 Then chunk(n)=0
+Case 60: 		;Whip
+	chunkPic(n)=ptPic(40,8):chunkPic_(n)=ptPic_(40,8)
+	If chunkSeq(n) > 1 Or zhit(chunkOwner(n))=1 Then chunk(n)=0
+
+Default
+	 a=5:b=10:c=14	;Blocking
+	If chunkSeq(n) => 1 And chunkSeq(n) =< a Then chunkPic(n)= ptPic(3,1):chunkPic_(n)= ptPic(3,1)
+	If chunkSeq(n) > a And chunkSeq(n) =< b Then chunkPic(n)= ptPic(1,2):chunkPic_(n)= ptPic(1,2)
+	If chunkSeq(n) > b And chunkSeq(n) =< c Then chunkPic(n)= ptPic(1,3):chunkPic_(n)= ptPic(1,3)
+	If chunkSeq(n) > c Then chunk(n)=0
+
+End Select
+
+If chunk(n)=0 And n = chunkAmount Then chunkAmount=n-1
+
+End Function
+;----------------------------- Object Data-------------------------------------------------------
+Function objData(n,e)
+
+objHitChunk(n)=5
+objNoGrav(n)=0
+objTrailType(n)=0
+objSuper(n)=0
+objHitMode(n)=0
+objHitXspeed(n)=3
+objHitYspeed(n)=2
+objFallTime(n)=30
+objEat(n)=0
+BeatIten(n)=0
+objExplosive(n)=0
+xObjHand(n)=0
+yObjHand(n)=0
+objFrameTime(n)=999
+objFrameAmount(n)=1
+objCurFrame(n)=1
+objFrameSeq(n)=0
+objZMade(n)=0
+objBounce(n)=0
+
+Select objType(n)
+Case 1	;yellow shell
+	objXspeed(n)=7
+	objSize(n)=14
+	objYSpeed(n)=-1
+	objYForce(n)=-6
+	objdamage(n)=25
+	objHeight(n)=16
+	objSide(n)=7
+	objImpact(n)=12
+	If e=0 Then objLife(n)=50
+	BeatIten(n)=0
+	objHitSound(n)=tucupSnd
+	objPic(n,1)=obj1P
+	objPic_(n,1)=obj1P
+
+Case 2	;MedKit
+	objXspeed(n)=3
+	objSize(n)=14
+	objYSpeed(n)=-1
+	objYForce(n)=-3
+	objdamage(n)=10
+	objHeight(n)=16
+	objSide(n)=7
+	objImpact(n)=15
+	If e=0 Then objLife(n)=20
+	BeatIten(n)=0
+	objHitSound(n)=highpunchSnd
+	objPic(n,1)=obj2P
+	objPic_(n,1)=obj2P
+	objEat(n)=1
+
+Case 3	;Green shell
+	objXspeed(n)=7
+	objSize(n)=14
+	objYSpeed(n)=-1
+	objYForce(n)=-6
+	objdamage(n)=20
+	objHeight(n)=16
+	objSide(n)=7
+	objImpact(n)=10
+	If e=0 Then objLife(n)=20
+	BeatIten(n)=0
+	objHitSound(n)=tucupSnd
+	objPic(n,1)=obj3P
+	objPic_(n,1)=obj3P
+
+Case 4  ;Explosive Barrel
+	objXspeed(n)=6
+	objSize(n)=14
+	objYSpeed(n)=-1
+	objYForce(n)=-5
+	objdamage(n)=3
+	objHeight(n)=16
+	objSide(n)=7
+	objImpact(n)=20
+	objExplosive(n)=1
+	If e=0 Then objLife(n)=20
+	BeatIten(n)=0
+	objTrailType(n)=1
+	objExplosionSound(n)=explodeSnd
+	objHitSound(n)=highpunchSnd
+	objPic(n,1)=obj4p
+	objPic_(n,1)=obj4P
+
+Case 5  ;helper
+	objXspeed(n)=2.5
+	objSize(n)=14
+	objYSpeed(n)=-1
+	objYForce(n)=-2.5
+	objdamage(n)=2
+	objHeight(n)=16
+	objSide(n)=objSize(n)/2
+	objImpact(n)=20
+	objExplosive(n)=4	;defines what will do when obj hits something!
+	If e=0 Then objLife(n)=20
+	BeatIten(n)=0
+	objHitSound(n)=highpunchSnd
+	objPic(n,1)=obj5p
+	objPic_(n,1)=obj5P
+
+Case 6  ;Club
+	objXspeed(n)=3
+	objSize(n)=12
+	objYSpeed(n)=-1
+	objYForce(n)=-2.5
+	objdamage(n)=20
+	objHitMode(n)=2
+	objHitXspeed(n)=4
+	objHitYspeed(n)=2
+	If e=0 Then objAmmo(n)=1
+	objFallTime(n)=40
+	objHeight(n)=52
+	objSide(n)=objSize(n)/2
+	objImpact(n)=20
+	If e=0 Then objLife(n)=20
+	BeatIten(n)=1
+	objHitSound(n)=highpunchSnd
+	BeatItenType(n)=11
+	objPic(n,1)=epic(1,1)
+	objPic_(n,1)=epic_(1,1)
+
+Case 7  ; gun
+	objXspeed(n)=5
+	objSize(n)=16
+	objYSpeed(n)=-1
+	objYForce(n)=-5
+	objdamage(n)=12
+	objHeight(n)=10
+	objSide(n)=objSize(n)/2
+	objImpact(n)=15
+	BeatIten(n)=1
+	If e=0 Then ShotsFired(n)=0
+	If e=0 Then objAmmo(n)=15
+	If e=0 Then objLife(n)=10
+	shotFireSound(e)=shotSnd
+	shotPushForce(n)=0
+	BeatItenType(n)=12
+	objHitSound(n)=highpunchSnd
+	objPic(n,1)=ePic(2,1)
+	objPic_(n,1)=ePic_(2,1)
+	zCurWeapon(e)=2		;type # for weapon drawing
+	zShootThis(e)=10	;type of bullet from weapon
+	zPushedForce(e)=shotPushForce(n)
+	xObjHand(n)=8
+
+Case 8	;Acid spit
+	objXspeed(n)=4
+	objSize(n)=14
+	objYSpeed(n)=-1
+	objYForce(n)=-5
+	objdamage(n)=5
+	objHeight(n)=6
+	objSide(n)=objSize(n)/2
+	objImpact(n)=20
+	objExplosive(n)=2
+	objHitMode(n)=2
+	objHitXspeed(n)=4
+	objHitYspeed(n)=2
+	objFallTime(n)=30
+	If e=0 Then objLife(n)=20
+	BeatIten(n)=0
+	objZmade(n)=1
+	objTrailType(n)=2
+	objExplosionSound(n)=highpunchSnd
+	objHitSound(n)=highpunchSnd
+	objPic(n,1)=obj8p
+	objPic_(n,1)=obj8P
+	objHitChunk(n)=10
+
+Case 9	;batman little bomb
+	objXspeed(n)=2.5
+	objSize(n)=8
+	objYSpeed(n)=-2
+	objYForce(n)=-3
+	objdamage(n)=5
+	objHeight(n)=8
+	objSide(n)=objSize(n)/2
+	objImpact(n)=20
+	objExplosive(n)=3
+	objHitMode(n)=2
+	objHitXspeed(n)=4
+	objHitYspeed(n)=2
+	objFallTime(n)=30
+	If e=0 Then objLife(n)=20
+	BeatIten(n)=0
+	objZmade(n)=1
+	objTrailType(n)=1
+	objExplosionSound(n)=explodeSnd
+	objHitSound(n)=NoSnd
+	objPic(n,1)=obj9p
+	objPic_(n,1)=obj9P_
+	objHitChunk(n)=26
+
+Case 10	;Bazooka
+	objXspeed(n)=4
+	objSize(n)=16
+	objYSpeed(n)=-1
+	objYForce(n)=-4
+	objdamage(n)=10
+	objHeight(n)=14
+	objSide(n)=objSize(n)/2
+	objImpact(n)=15
+	BeatIten(n)=1
+	If e=0 Then ShotsFired(n)=0
+	If e=0 Then objAmmo(n)=1
+	If e=0 Then objLife(n)=6
+	shotFireSound(e)=bazookaSnd
+	shotPushForce(n)=1.5
+	BeatItenType(n)=12
+	objHitSound(n)=highpunchSnd
+	objPic(n,1)=ePic(3,1)
+	objPic_(n,1)=ePic_(3,1)
+	zCurWeapon(e)=3		;type # for weapon drawing
+	zShootThis(e)=23	;type of bullet from weapon
+	zPushedForce(e)=shotPushForce(n)
+	xObjHand(n)=10
+
+Case 11  ; ray GUN
+	objXspeed(n)=5
+	objSize(n)=20
+	objYSpeed(n)=-1
+	objYForce(n)=-5
+	objdamage(n)=12
+	objHeight(n)=15
+	objSide(n)=objSize(n)/2
+	objImpact(n)=15
+	BeatIten(n)=1
+	If e=0 Then ShotsFired(n)=0
+	If e=0 Then objAmmo(n)=4
+	If e=0 Then objLife(n)=6
+	shotFireSound(e)=raySnd
+	shotPushForce(n)=.5
+	BeatItenType(n)=12
+	objHitSound(n)=highpunchSnd
+	objPic(n,1)=ePic(4,1)
+	objPic_(n,1)=ePic_(4,1)
+	zCurWeapon(e)=4		;type # for weapon drawing
+	zShootThis(e)=25	;type of bullet from weapon
+	zPushedForce(e)=shotPushForce(n)
+	xObjHand(n)=12 ;: yObjHand(n)=-8
+
+Case 12	;Ray ball
+	objXspeed(n)=4
+	objSize(n)=12
+	objYSpeed(n)=-1
+	objYForce(n)=-5
+	objdamage(n)=5
+	objHeight(n)=12
+	objSide(n)=objSize(n)/2
+	objImpact(n)=20
+	objExplosive(n)=2
+	objHitMode(n)=2
+	objHitXspeed(n)=4
+	objHitYspeed(n)=3
+	objFallTime(n)=40
+	If e=0 Then objLife(n)=2
+	BeatIten(n)=0
+	objTrailType(n)=4
+	objHitSound(n)=shockSnd
+	objPic(n,1)=shotImage(30)
+	objPic_(n,1)=shotImage(30)
+	objPic(n,2)=shotImage(31)
+	objPic_(n,2)=shotImage(31)
+	objFrameTime(n)=3
+	objFrameAmount(n)=2
+	objHitChunk(n)=30
+
+Case 13	;Hammer
+	objXspeed(n)=4
+	objSize(n)=12
+	objYSpeed(n)=-1
+	objYForce(n)=-5
+	objdamage(n)=8
+	objHeight(n)=12
+	objSide(n)=objSize(n)/2
+	objImpact(n)=20
+	objExplosive(n)=2
+	objHitMode(n)=0
+	objHitXspeed(n)=4
+	objHitYspeed(n)=3
+	objFallTime(n)=40
+	If e=0 Then objLife(n)=20
+	objHitSound(n)=marioFierceSnd
+	objZmade(n)=1
+
+	objPic(n,1)=ePic(5,1)
+	objPic_(n,1)=ePic_(5,1)
+	objPic(n,2)=ePic(5,2)
+	objPic_(n,2)=ePic_(5,2)
+	objPic(n,3)=ePic(5,3)
+	objPic_(n,3)=ePic_(5,3)
+	objPic(n,4)=ePic(5,4)
+	objPic_(n,4)=ePic_(5,4)
+
+	objPic(n,5)=ePic_(5,4)
+	objPic_(n,5)=ePic(5,4)
+	objPic(n,6)=ePic_(5,3)
+	objPic_(n,6)=ePic(5,3)
+	objPic(n,7)=ePic_(5,2)
+	objPic_(n,7)=ePic(5,2)
+	objPic(n,8)=ePic_(5,1)
+	objPic_(n,8)=ePic(5,1)
+
+	objFrameTime(n)=3
+	objFrameAmount(n)=8
+	objHitChunk(n)=10
+
+Case 14	;dragon fire ball
+	objXspeed(n)=4
+	objSize(n)=22
+	objYSpeed(n)=1
+	objYForce(n)=-5
+	objdamage(n)=5
+	objHeight(n)=16
+	objSide(n)=objSize(n)/2
+	objImpact(n)=20
+	objExplosive(n)=2
+	objHitMode(n)=0
+	If e=0 Then objLife(n)=20
+	BeatIten(n)=0
+	objNoGrav(n)=1
+	objTrailType(n)=1
+	objExplosionSound(n)=fireHitSnd
+	objHitSound(n)=fireHitSnd
+	objPic(n,1)=ePic(6,1)
+	objPic_(n,1)=ePic_(6,1)
+	objPic(n,2)=ePic(6,2)
+	objPic_(n,2)=ePic_(6,2)
+	objFrameTime(n)=3
+	objFrameAmount(n)=2
+	objHitChunk(n)=7
+
+Case 15	;cannon ball
+	objXspeed(n)=2.5
+	objSize(n)=12
+	objYSpeed(n)=-2
+	objYForce(n)=-3
+	objdamage(n)=8
+	objHeight(n)=12
+	objSide(n)=objSize(n)/2
+	objImpact(n)=20
+	objExplosive(n)=3
+	objHitMode(n)=0
+	objHitXspeed(n)=4
+	objHitYspeed(n)=2
+	objFallTime(n)=30
+	If e=0 Then objLife(n)=20
+	objExplosionSound(n)=marioFierceSnd
+	objHitSound(n)=marioFierceSnd
+	objPic(n,1)=shotImage(33)
+	objPic_(n,1)=shotImage(33)
+	objHitChunk(n)=20
+
+Case 16	;Flying bat
+	objXspeed(n)=4
+	objSize(n)=16
+	objYSpeed(n)=0
+	objYForce(n)=-5
+	objdamage(n)=10
+	objHeight(n)=16
+	objSide(n)=objSize(n)/2
+	objImpact(n)=20
+	objExplosive(n)=2
+	objHitMode(n)=2
+	objHitXspeed(n)=2
+	objHitYspeed(n)=2
+	objFallTime(n)=40
+	If e=0 Then objLife(n)=20
+	BeatIten(n)=0
+	objNoGrav(n)=1
+	objExplosionSound(n)=marioFierceSnd
+	objHitSound(n)=marioFierceSnd
+	objPic(n,1)=ePic(7,1)
+	objPic_(n,1)=ePic_(7,1)
+	objPic(n,2)=ePic(7,2)
+	objPic_(n,2)=ePic_(7,2)
+	objFrameTime(n)=4
+	objFrameAmount(n)=2
+	objHitChunk(n)=20
+	objSuper(n)=1
+
+Case 17	;big rock
+	objXspeed(n)=4
+	objSize(n)=42
+	objYSpeed(n)=-1
+	objYForce(n)=-5
+	objdamage(n)=12
+	objHeight(n)=42
+	objSide(n)=objSize(n)/2
+	objImpact(n)=25
+	objExplosive(n)=3
+	objHitMode(n)=0
+	If e=0 Then objLife(n)=20
+	objHitSound(n)=marioFierceSnd
+	objExplosionSound(n)=fireHitSnd
+
+	objPic(n,1)=ePic(8,1)
+	objPic_(n,1)=ePic(8,1)
+	objPic(n,2)=ePic(8,2)
+	objPic_(n,2)=ePic(8,2)
+	objPic(n,3)=ePic(8,3)
+	objPic_(n,3)=ePic(8,3)
+	objPic(n,4)=ePic(8,4)
+	objPic_(n,4)=ePic(8,4)
+
+	objFrameTime(n)=8
+	objFrameAmount(n)=4
+	objHitChunk(n)=34
+	objSuper(n)=1
+
+Case 18	;little rock
+	objXspeed(n)=4
+	objSize(n)=16
+	objYSpeed(n)=-1
+	objYForce(n)=-5
+	objdamage(n)=8
+	objHeight(n)=16
+	objSide(n)=objSize(n)/2
+	objImpact(n)=20
+	objExplosive(n)=3
+	objHitMode(n)=0
+	If e=0 Then objLife(n)=20
+	objHitSound(n)=marioFierceSnd
+	objExplosionSound(n)=fireHitSnd
+
+	objPic(n,1)=ePic(9,1)
+	objPic_(n,1)=ePic(9,1)
+	objPic(n,2)=ePic(9,2)
+	objPic_(n,2)=ePic(9,2)
+	objPic(n,3)=ePic(9,3)
+	objPic_(n,3)=ePic(9,3)
+	objPic(n,4)=ePic(9,4)
+	objPic_(n,4)=ePic(9,4)
+
+	objFrameTime(n)=8
+	objFrameAmount(n)=4
+	objHitChunk(n)=35
+
+
+Case 19	;little lava rock
+	objXspeed(n)=4
+	objSize(n)=16
+	objYSpeed(n)=-1
+	objYForce(n)=-5
+	objdamage(n)=8
+	objHeight(n)=16
+	objSide(n)=objSize(n)/2
+	objImpact(n)=20
+	objExplosive(n)=3
+	objHitMode(n)=0
+	If e=0 Then objLife(n)=20
+	objHitSound(n)=fireHitSnd
+	objExplosionSound(n)=NoSnd
+
+	objPic(n,1)=ePic(10,1)
+	objPic_(n,1)=ePic(10,1)
+	objPic(n,2)=ePic(10,2)
+	objPic_(n,2)=ePic(10,2)
+	objPic(n,3)=ePic(10,3)
+	objPic_(n,3)=ePic(10,3)
+	objPic(n,4)=ePic(10,4)
+	objPic_(n,4)=ePic(10,4)
+
+	objFrameTime(n)=8
+	objFrameAmount(n)=4
+	objHitChunk(n)=7
+
+Case 20	;axe
+	objXspeed(n)=2
+	objSize(n)=14
+	objYSpeed(n)=-1
+	objYForce(n)=-5
+	objdamage(n)=5
+	objHeight(n)=26
+	objSide(n)=objSize(n)/2
+	objImpact(n)=12
+	objExplosive(n)=3
+	objHitMode(n)=2
+	objHitXspeed(n)=3
+	objHitYspeed(n)=2
+	objFallTime(n)=40
+	objHitSound(n)=mikePunchSnd
+	objExplosionSound(n)=noSnd
+
+	objPic(n,1) = ePic(11,1)
+	objPic_(n,1)= ePic_(11,1)
+	objPic(n,2) = ePic(11,2)
+	objPic_(n,2)= ePic_(11,2)
+	objPic(n,3) = ePic(11,3)
+	objPic_(n,3)= ePic_(11,3)
+	objPic(n,4) = ePic(11,4)
+	objPic_(n,4)= ePic_(11,4)
+	objPic(n,5) = ePic(11,5)
+	objPic_(n,5)= ePic_(11,5)
+	objPic(n,6) = ePic(11,6)
+	objPic_(n,6)= ePic_(11,6)
+	objPic(n,7) = ePic(11,7)
+	objPic_(n,7)= ePic_(11,7)
+	objPic(n,8) = ePic(11,8)
+	objPic_(n,8)= ePic_(11,8)
+
+	objFrameTime(n)=3
+	objFrameAmount(n)=8
+	objHitChunk(n)=10
+
+End Select
+
+End Function
+;---------------------- Object explodes --------------------------------
+Function objExp(n,x,y,kind)
+
+Select kind
+Case 1	;obj explosion
+	makeExp(n,x,y,kind)
+	makeChunk(n,x,y,2,4)
+Case 2	;alien spit
+	makeChunk(n,x,y,2,objHitChunk(n))
+Case 3	;explosion = object hit chunk
+	If gamesound And inSight(x,y) Then PlaySound objExplosionSound(n)
+	makeChunk(n,x,y,2,objHitChunk(n))
+Case 4	;helpers
+	found=0
+	For i=5 To 30
+		If zon(i)=0 Then
+			nn=i : found=1
+			If nn > zzamount Then zzamount=nn
+		EndIf
+		If found=1 Then Exit
+	Next
+	makeChunk(nn,zx(nn),zy(nn),2,10)
+	.tryOtherHelper
+	sn=Rand(1,4)
+	;sn=4	;test
+	If sn=1 Then	; laser turret
+		curGuy(nn)=43
+		initZ(nn)
+		zon(nn)=1
+		zx(nn)=x
+		zy(nn)=y-15
+		zFace(nn)=4 ;facDir(n,curF(n))
+		zLives(nn)=0
+		AiLevel(nn)=1	;makes it last only for a while (see moves2.bb)
+		zTeam(nn)=zTeam(objOwner(n))
+		zDeadEvent(nn)=0
+
+		If gamesound Then PlaySound clickSnd
+		ztempShield(nn)=0
+		zTrail(nn)=0
+		aiGetTarget(nn)
+	EndIf
+	If sn=2 And noAirStrike=0 Then	; bombing ship (air strike)
+		If gameMode=2 Or vsMode=0 Then Goto tryOtherHelper
+		curGuy(nn)=45
+		initZ(nn)
+		zCurPic(nn)=zPic(CurGuy(nn),1,0)
+		zon(nn)=1
+		zx(nn)=xScr+710
+		zy(nn)=yScr+100
+		zFace(nn)=4 ;facDir(n,curF(n))
+		zLives(nn)=0
+		AiLevel(nn)=5
+		zTeam(nn)=zTeam(objOwner(n))
+		zDeadEvent(nn)=0
+		ztempShield(nn)=0
+		zTrail(nn)=0
+	EndIf
+	If sn=3 Then	; ray balls cannon
+		curGuy(nn)=46
+		initZ(nn)
+		zCurPic(nn)=zPic(CurGuy(nn),1,0)
+		zon(nn)=1
+		zx(nn)=x
+		zy(nn)=y-15
+		zFace(nn)=4 ;facDir(n,curF(n))
+		zLives(nn)=0
+		AiLevel(nn)=5
+		zTeam(nn)=zTeam(objOwner(n))
+		zDeadEvent(nn)=0
+
+		If gamesound Then PlaySound clickSnd
+		ztempShield(nn)=0
+		zTrail(nn)=0
+	EndIf
+	If sn=4 Then ;bunch of flying bats
+		If gameMode=2 Or vsMode=0 Then Goto tryOtherHelper
+		If gameSound Then PlaySound batsSnd
+		makeChunk(nn,zx(nn),zy(nn),2,5)
+		For i=1 To 10
+			xx=xx+50
+			oo = getObjAway(objOwner(n),16)
+
+			objHitXspeed(oo)=0
+			objHitYspeed(oo)=4
+			objFallTime(oo)=80
+
+			objTaken(oo)=0:objHurt(oo)=1
+			objThrow(oo)=1:
+			objdir(oo)=4
+			xobj(oo)=xScr+(580+xx)
+			yobj(oo)=y-(Rand(2,150))
+
+
+		Next
+	EndIf
+
+End Select
+
+End Function
+;----------------------------- Explosion data-------------------------------------------------------
+Function expData(n)
+Select expType(n)
+Case 1
+	expDamage(n)=40
+	expHeight(n)=40
+	expSide(n)=20
+	expImpact(n)=50
+	explosionSound(n)=explodeSnd
+
+End Select
+
+End Function
+;------------------Load sprites ------------------------------------
+Function loadPics(n)
+
+gfxdir$="gfx\" + n + "\"
+guyLoaded(n)=1
+
+zpic(n,20,1)=LoadImage(gfxdir$ + "zSuperPic.bmp")
+
+zpic(n,1,0)=LoadImage(gfxdir$ + "zwalk0.bmp")
+zpic(n,1,1)=LoadImage(gfxdir$ + "zwalk1.bmp")
+zpic(n,1,2)=LoadImage(gfxdir$ + "zwalk2.bmp")
+zpic(n,1,3)=LoadImage(gfxdir$ + "zwalk3.bmp")
+zpic_(n,1,0)=LoadImage(gfxdir$ + "zwalk0_.bmp")
+zpic_(n,1,1)=LoadImage(gfxdir$ + "zwalk1_.bmp")
+zpic_(n,1,2)=LoadImage(gfxdir$ + "zwalk2_.bmp")
+zpic_(n,1,3)=LoadImage(gfxdir$ + "zwalk3_.bmp")
+
+zpic(n,2,0)=LoadImage(gfxdir$ + "zfallen.bmp")
+zpic(n,2,1)=LoadImage(gfxdir$ + "zfalling1.bmp")
+zpic(n,2,2)=LoadImage(gfxdir$ + "zfalling2.bmp")
+zpic(n,2,3)=LoadImage(gfxdir$ + "zfalling3.bmp")
+zpic(n,2,4)=LoadImage(gfxdir$ + "zfalling4.bmp")
+zpic(n,2,5)=LoadImage(gfxdir$ + "zfalling5.bmp")
+zpic(n,2,6)=LoadImage(gfxdir$ + "zfalling6.bmp")
+zpic(n,2,7)=LoadImage(gfxdir$ + "zfalling7.bmp")
+
+zpic_(n,2,0)=LoadImage(gfxdir$ + "zfallen_.bmp")
+zpic_(n,2,1)=LoadImage(gfxdir$ + "zfalling1_.bmp")
+zpic_(n,2,2)=LoadImage(gfxdir$ + "zfalling2_.bmp")
+zpic_(n,2,3)=LoadImage(gfxdir$ + "zfalling3_.bmp")
+zpic_(n,2,4)=LoadImage(gfxdir$ + "zfalling4_.bmp")
+zpic_(n,2,5)=LoadImage(gfxdir$ + "zfalling5_.bmp")
+zpic_(n,2,6)=LoadImage(gfxdir$ + "zfalling6_.bmp")
+zpic_(n,2,7)=LoadImage(gfxdir$ + "zfalling7_.bmp")
+
+zpic(n,3,1)=LoadImage(gfxdir$ + "zduck.bmp")
+zpic_(n,3,1)=LoadImage(gfxdir$ + "zduck_.bmp")
+
+zpic(n,4,1)=LoadImage(gfxdir$ + "zair.bmp")
+zPic_(n,4,1)=LoadImage(gfxdir$ + "zair_.bmp")
+
+zpic(n,5,1)=LoadImage(gfxdir$ + "zFlip1.bmp")
+zpic(n,5,2)=LoadImage(gfxdir$ + "zFlip2.bmp")
+zpic(n,5,3)=LoadImage(gfxdir$ + "zFlip3.bmp")
+zpic(n,5,4)=LoadImage(gfxdir$ + "zFlip4.bmp")
+zpic_(n,5,1)=LoadImage(gfxdir$ + "zFlip1_.bmp")
+zpic_(n,5,2)=LoadImage(gfxdir$ + "zFlip2_.bmp")
+zpic_(n,5,3)=LoadImage(gfxdir$ + "zFlip3_.bmp")
+zpic_(n,5,4)=LoadImage(gfxdir$ + "zFlip4_.bmp")
+
+zpic(n,6,1)=LoadImage(gfxdir$ + "zblow1.bmp")
+zpic(n,6,2)=LoadImage(gfxdir$ + "zblow2.bmp")
+zpic(n,6,3)=LoadImage(gfxdir$ + "zblow3.bmp")
+zpic(n,6,4)=LoadImage(gfxdir$ + "zblow4.bmp")
+zpic(n,6,5)=LoadImage(gfxdir$ + "zblow5.bmp")
+zpic(n,6,6)=LoadImage(gfxdir$ + "zblow6.bmp")
+zpic(n,6,7)=LoadImage(gfxdir$ + "zblow7.bmp")
+zpic(n,6,8)=LoadImage(gfxdir$ + "zblow8.bmp")
+zpic_(n,6,1)=LoadImage(gfxdir$ + "zblow1_.bmp")
+zpic_(n,6,2)=LoadImage(gfxdir$ + "zblow2_.bmp")
+zpic_(n,6,3)=LoadImage(gfxdir$ + "zblow3_.bmp")
+zpic_(n,6,4)=LoadImage(gfxdir$ + "zblow4_.bmp")
+zpic_(n,6,5)=LoadImage(gfxdir$ + "zblow5_.bmp")
+zpic_(n,6,6)=LoadImage(gfxdir$ + "zblow6_.bmp")
+zpic_(n,6,7)=LoadImage(gfxdir$ + "zblow7_.bmp")
+zpic_(n,6,8)=LoadImage(gfxdir$ + "zblow8_.bmp")
+
+zpic(n,7,1)=LoadImage(gfxdir$ + "zuspecial1.bmp")
+zpic(n,7,2)=LoadImage(gfxdir$ + "zuspecial2.bmp")
+zpic(n,7,3)=LoadImage(gfxdir$ + "zuspecial3.bmp")
+zpic(n,7,4)=LoadImage(gfxdir$ + "zuspecial4.bmp")
+zpic(n,7,5)=LoadImage(gfxdir$ + "zuspecial5.bmp")
+zpic(n,7,6)=LoadImage(gfxdir$ + "zuspecial6.bmp")
+zpic_(n,7,1)=LoadImage(gfxdir$ + "zuspecial1_.bmp")
+zpic_(n,7,2)=LoadImage(gfxdir$ + "zuspecial2_.bmp")
+zpic_(n,7,3)=LoadImage(gfxdir$ + "zuspecial3_.bmp")
+zpic_(n,7,4)=LoadImage(gfxdir$ + "zuspecial4_.bmp")
+zpic_(n,7,5)=LoadImage(gfxdir$ + "zuspecial5_.bmp")
+zpic_(n,7,6)=LoadImage(gfxdir$ + "zuspecial6_.bmp")
+
+zpic(n,8,1)=LoadImage(gfxdir$ + "zflykick1.bmp")
+zpic(n,8,2)=LoadImage(gfxdir$ + "zflykick2.bmp")
+zpic(n,8,3)=LoadImage(gfxdir$ + "zflykick3.bmp")
+zpic(n,8,4)=LoadImage(gfxdir$ + "zflykick4.bmp")
+zpic(n,8,5)=LoadImage(gfxdir$ + "zflykick5.bmp")
+
+zpic_(n,8,1)=LoadImage(gfxdir$ + "zflykick1_.bmp")
+zpic_(n,8,2)=LoadImage(gfxdir$ + "zflykick2_.bmp")
+zpic_(n,8,3)=LoadImage(gfxdir$ + "zflykick3_.bmp")
+zpic_(n,8,4)=LoadImage(gfxdir$ + "zflykick4_.bmp")
+zpic_(n,8,5)=LoadImage(gfxdir$ + "zflykick5_.bmp")
+
+zpic(n,9,1)=LoadImage(gfxdir$ + "zlowkick1.bmp")
+zpic(n,9,2)=LoadImage(gfxdir$ + "zlowkick2.bmp")
+zpic(n,9,3)=LoadImage(gfxdir$ + "zlowkick3.bmp")
+zpic(n,9,4)=LoadImage(gfxdir$ + "zlowkick4.bmp")
+zpic(n,9,5)=LoadImage(gfxdir$ + "zlowkick5.bmp")
+zpic(n,9,6)=LoadImage(gfxdir$ + "zlowkick6.bmp")
+zpic(n,9,7)=LoadImage(gfxdir$ + "zlowkick7.bmp")
+zpic_(n,9,1)=LoadImage(gfxdir$ + "zlowkick1_.bmp")
+zpic_(n,9,2)=LoadImage(gfxdir$ + "zlowkick2_.bmp")
+zpic_(n,9,3)=LoadImage(gfxdir$ + "zlowkick3_.bmp")
+zpic_(n,9,4)=LoadImage(gfxdir$ + "zlowkick4_.bmp")
+zpic_(n,9,5)=LoadImage(gfxdir$ + "zlowkick5_.bmp")
+zpic_(n,9,6)=LoadImage(gfxdir$ + "zlowkick6_.bmp")
+zpic_(n,9,7)=LoadImage(gfxdir$ + "zlowkick7_.bmp")
+
+zpic(n,10,1)=LoadImage(gfxdir$ + "zspecial1.bmp")
+zpic(n,10,2)=LoadImage(gfxdir$ + "zspecial2.bmp")
+zpic(n,10,3)=LoadImage(gfxdir$ + "zspecial3.bmp")
+zpic(n,10,4)=LoadImage(gfxdir$ + "zspecial4.bmp")
+zpic(n,10,5)=LoadImage(gfxdir$ + "zspecial5.bmp")
+zpic(n,10,6)=LoadImage(gfxdir$ + "zspecial6.bmp")
+zpic(n,10,7)=LoadImage(gfxdir$ + "zspecial7.bmp")
+zpic(n,10,8)=LoadImage(gfxdir$ + "zspecial8.bmp")
+zpic_(n,10,1)=LoadImage(gfxdir$ + "zspecial1_.bmp")
+zpic_(n,10,2)=LoadImage(gfxdir$ + "zspecial2_.bmp")
+zpic_(n,10,3)=LoadImage(gfxdir$ + "zspecial3_.bmp")
+zpic_(n,10,4)=LoadImage(gfxdir$ + "zspecial4_.bmp")
+zpic_(n,10,5)=LoadImage(gfxdir$ + "zspecial5_.bmp")
+zpic_(n,10,6)=LoadImage(gfxdir$ + "zspecial6_.bmp")
+zpic_(n,10,7)=LoadImage(gfxdir$ + "zspecial7_.bmp")
+zpic_(n,10,8)=LoadImage(gfxdir$ + "zspecial8_.bmp")
+
+zpic(n,11,1)=LoadImage(gfxdir$ + "zshot1.bmp")
+zpic(n,11,2)=LoadImage(gfxdir$ + "zshot2.bmp")
+zpic_(n,11,1)=LoadImage(gfxdir$ + "zshot1_.bmp")
+zpic_(n,11,2)=LoadImage(gfxdir$ + "zshot2_.bmp")
+
+zpic(n,12,1)=LoadImage(gfxdir$ + "zDspecial1.bmp")
+zpic(n,12,2)=LoadImage(gfxdir$ + "zDspecial2.bmp")
+zpic(n,12,3)=LoadImage(gfxdir$ + "zDspecial3.bmp")
+zpic(n,12,4)=LoadImage(gfxdir$ + "zDspecial4.bmp")
+zpic(n,12,5)=LoadImage(gfxdir$ + "zDspecial5.bmp")
+zpic(n,12,6)=LoadImage(gfxdir$ + "zDspecial6.bmp")
+zpic(n,12,7)=LoadImage(gfxdir$ + "zDspecial7.bmp")
+zpic_(n,12,1)=LoadImage(gfxdir$ + "zDspecial1_.bmp")
+zpic_(n,12,2)=LoadImage(gfxdir$ + "zDspecial2_.bmp")
+zpic_(n,12,3)=LoadImage(gfxdir$ + "zDspecial3_.bmp")
+zpic_(n,12,4)=LoadImage(gfxdir$ + "zDspecial4_.bmp")
+zpic_(n,12,5)=LoadImage(gfxdir$ + "zDspecial5_.bmp")
+zpic_(n,12,6)=LoadImage(gfxdir$ + "zDspecial6_.bmp")
+zpic_(n,12,7)=LoadImage(gfxdir$ + "zDspecial7_.bmp")
+
+zpic(n,13,1)=LoadImage(gfxdir$ + "zblock1.bmp")
+zpic_(n,13,1)=LoadImage(gfxdir$ + "zblock1_.bmp")
+
+zpic(n,14,1)=LoadImage(gfxdir$ + "zupblow1.bmp")
+zpic(n,14,2)=LoadImage(gfxdir$ + "zupblow2.bmp")
+zpic(n,14,3)=LoadImage(gfxdir$ + "zupblow3.bmp")
+zpic(n,14,4)=LoadImage(gfxdir$ + "zupblow4.bmp")
+zpic(n,14,5)=LoadImage(gfxdir$ + "zupblow5.bmp")
+zpic(n,14,6)=LoadImage(gfxdir$ + "zupblow6.bmp")
+zpic(n,14,7)=LoadImage(gfxdir$ + "zupblow7.bmp")
+zpic(n,14,8)=LoadImage(gfxdir$ + "zupblow8.bmp")
+zpic_(n,14,1)=LoadImage(gfxdir$ + "zupblow1_.bmp")
+zpic_(n,14,2)=LoadImage(gfxdir$ + "zupblow2_.bmp")
+zpic_(n,14,3)=LoadImage(gfxdir$ + "zupblow3_.bmp")
+zpic_(n,14,4)=LoadImage(gfxdir$ + "zupblow4_.bmp")
+zpic_(n,14,5)=LoadImage(gfxdir$ + "zupblow5_.bmp")
+zpic_(n,14,6)=LoadImage(gfxdir$ + "zupblow6_.bmp")
+zpic_(n,14,7)=LoadImage(gfxdir$ + "zupblow7_.bmp")
+zpic_(n,14,8)=LoadImage(gfxdir$ + "zupblow8_.bmp")
+
+zpic(n,15,1)=LoadImage(gfxdir$ + "zgrab1.bmp")
+zpic(n,15,2)=LoadImage(gfxdir$ + "zgrab2.bmp")
+zpic(n,15,3)=LoadImage(gfxdir$ + "zgrab3.bmp")
+zpic(n,15,4)=LoadImage(gfxdir$ + "zgrab4.bmp")
+zpic(n,15,5)=LoadImage(gfxdir$ + "zgrab5.bmp")
+zpic(n,15,6)=LoadImage(gfxdir$ + "zgrab6.bmp")
+zpic(n,15,7)=LoadImage(gfxdir$ + "zgrab7.bmp")
+zpic(n,15,8)=LoadImage(gfxdir$ + "zgrab8.bmp")
+zpic(n,15,9)=LoadImage(gfxdir$ + "zgrab9.bmp")
+zpic(n,15,10)=LoadImage(gfxdir$ + "zgrab10.bmp")
+zpic(n,15,11)=LoadImage(gfxdir$ + "zgrab11.bmp")
+zpic(n,15,12)=LoadImage(gfxdir$ + "zgrab12.bmp")
+
+zpic_(n,15,1)=LoadImage(gfxdir$ + "zgrab1_.bmp")
+zpic_(n,15,2)=LoadImage(gfxdir$ + "zgrab2_.bmp")
+zpic_(n,15,3)=LoadImage(gfxdir$ + "zgrab3_.bmp")
+zpic_(n,15,4)=LoadImage(gfxdir$ + "zgrab4_.bmp")
+zpic_(n,15,5)=LoadImage(gfxdir$ + "zgrab5_.bmp")
+zpic_(n,15,6)=LoadImage(gfxdir$ + "zgrab6_.bmp")
+zpic_(n,15,7)=LoadImage(gfxdir$ + "zgrab7_.bmp")
+zpic_(n,15,8)=LoadImage(gfxdir$ + "zgrab8_.bmp")
+zpic_(n,15,9)=LoadImage(gfxdir$ + "zgrab9_.bmp")
+zpic_(n,15,10)=LoadImage(gfxdir$ + "zgrab10_.bmp")
+zpic_(n,15,11)=LoadImage(gfxdir$ + "zgrab11_.bmp")
+zpic_(n,15,12)=LoadImage(gfxdir$ + "zgrab12_.bmp")
+
+
+;add character (stuff the must be loaded the first time, such as sounds. Don't worry about the pics)
+
+If n=44 Then    ;Venom
+	For i=0 To 7
+	 zpic(n,2,i)=zpic(n,1,0)
+	 zpic_(n,2,i)=zpic_(n,1,0)
+	Next
+	For i=2 To 4
+	 zpic(n,5,i)=zpic(n,5,1)
+	 zpic_(n,5,i)=zpic_(n,5,1)
+	Next
+EndIf
+
+If n=49 Then	;Dragon
+	zpic(n,4,1)=zpic(n,1,0)
+	zpic_(n,4,1)=zpic_(n,1,0)
+	zpic(n,3,1)=zpic(n,1,0)
+	zpic_(n,3,1)=zpic_(n,1,0)
+	For i=0 To 7
+	zpic(n,2,i)=zpic(n,1,0)
+	zpic_(n,2,i)=zpic_(n,1,0)
+	Next
+	For i=1 To 4
+	zpic(n,5,i)=zpic(n,1,0)
+	zpic_(n,5,i)=zpic_(n,1,0)
+	Next
+    If dragonRoarSnd=0 Then dragonRoarSnd=LoadSound(soundsdir$ + "dragonRoar.wav")
+EndIf
+
+If n=47 Then	;soldier
+	zpic(n,4,1)=zpic(n,1,0)
+	zpic_(n,4,1)=zpic_(n,1,0)
+	For i=1 To 3
+	 zpic(n,1,i)=zpic(n,1,0)
+	 zpic_(n,1,i)=zpic_(n,1,0)
+	Next
+	For i=1 To 4
+	 zpic(n,5,i)=zpic(n,1,0)
+	 zpic_(n,5,i)=zpic_(n,1,0)
+	Next
+EndIf
+
+;laser helper / bombing ship / ray balls / cylinder / Laser Beam / punching bag
+If n=43 Or n=45 Or n=46 Or n= 48 Or n=50 Or n=52 Then
+	zpic(n,1,1)=zpic(n,1,0)
+	zpic_(n,1,1)=zpic_(n,1,0)
+	zpic(n,1,2)=zpic(n,1,0)
+	zpic_(n,1,2)=zpic_(n,1,0)
+	zpic(n,1,3)=zpic(n,1,0)
+	zpic_(n,1,3)=zpic_(n,1,0)
+	zpic(n,4,1)=zpic(n,1,0)
+	zpic_(n,4,1)=zpic_(n,1,0)
+	zpic(n,3,1)=zpic(n,1,0)
+	zpic_(n,3,1)=zpic_(n,1,0)
+	For i=0 To 7
+	zpic(n,2,i)=zpic(n,1,0)
+	zpic_(n,2,i)=zpic_(n,1,0)
+	Next
+	For i=1 To 4
+	zpic(n,5,i)=zpic(n,1,0)
+	zpic_(n,5,i)=zpic_(n,1,0)
+	Next
+
+EndIf
+
+If n=42 Then	;Joker
+	zpic(n,3,1)=zpic(n,1,0)
+	zpic_(n,3,1)=zpic_(n,1,0)
+	For i=1 To 4
+		zpic(n,5,i)=zpic(n,1,2)
+		zpic_(n,5,i)=zpic_(n,1,2)
+	Next
+	If jokerSnd=0 Then jokerSnd=LoadSound(soundsdir$ + "joker.wav")
+EndIf
+
+If n=10 Then ;Ritcher
+	If whipSnd=0 Then whipSnd=LoadSound(soundsdir$ + "whip.wav")
+	If crossSnd=0 Then crossSnd=LoadSound(soundsdir$ + "cross.wav")
+	If richterSnd=0 Then richterSnd=LoadSound(soundsdir$ + "richter.wav")
+	If fastThrowSnd=0 Then fastThrowSnd=LoadSound(soundsdir$ + "fastThrow.wav")
+EndIf
+
+If n=9 Then ;Goku
+	If goku1Snd=0 Then goku1Snd=LoadSound(soundsdir$ + "goku1.wav")
+	If gokuSnd=0 Then gokuSnd=LoadSound(soundsdir$ + "goku.wav")
+	If teleportSnd=0 Then teleportSnd=LoadSound(soundsdir$ + "teleport.wav")
+EndIf
+
+If n=8 Then 	;Predator
+	zpic(n,2,0)=zpic(n,2,4)
+	zpic_(n,2,0)=zpic_(n,2,4)
+	If PredatorSnd=0 Then PredatorSnd=LoadSound(soundsdir$ + "predator.wav")
+EndIf
+
+If n=7 Then ;Batman
+	If CapeSnd=0 Then CapeSnd=LoadSound(soundsdir$ + "cape.wav")
+EndIf
+
+If n=6 Or n=51 Then
+    If swordSnd=0 Then swordSnd=LoadSound(soundsdir$ + "sword.wav")
+	If hayabusaSnd=0 Then hayabusaSnd=LoadSound(soundsdir$ + "hayabusa.wav")
+EndIf
+
+If n=5 Then	;mike
+	If mikeSnd=0 Then mikeSnd=LoadSound(soundsdir$ + "mikeSnd.wav")
+	If mikeUpperCutSnd=0 Then mikeUpperCutSnd=LoadSound(soundsdir$ + "mikeUpperCut.wav")
+	If mikeFlipSnd=0 Then mikeFlipSnd=LoadSound(soundsdir$ + "mikeFlip.wav")
+	If mikeBreathSnd=0 Then mikeBreathSnd=LoadSound(soundsdir$ + "mikeBreath.wav")
+EndIf
+
+If n=4 Then ;Mario
+    If MarioUahaSnd=0 Then MarioUahaSnd=LoadSound(soundsdir$ + "uaha.wav")
+	If hiasnd=0 Then hiasnd=LoadSound(soundsdir$ + "hia.wav")
+	If hiahuusnd=0 Then hiahuusnd=LoadSound(soundsdir$ + "hiahuu.wav")
+	If mariouppercutsnd=0 Then mariouppercutsnd=LoadSound(soundsdir$ + "mariouppercut.wav")
+EndIf
+
+If n=3 Then     ;Spider-man
+    If spiderstingsnd=0 Then spiderstingsnd=LoadSound(soundsdir$ + "spidersting.wav")
+    If huasnd=0 Then huasnd=LoadSound(soundsdir$ + "hua.wav")
+    If webshotsnd=0 Then webshotsnd=LoadSound(soundsdir$ + "webshot.wav")
+EndIf
+
+If n=1 Then	;ryu
+    If hueSnd=0 Then hueSnd=LoadSound(soundsdir$ + "hue.wav")
+    If uppercutsnd=0 Then uppercutsnd=LoadSound(soundsdir$ + "uppercut.wav")
+    If ryuBallsnd=0 Then ryuBallsnd=LoadSound(soundsdir$ + "ryuball.wav")
+    If ryuSpinsnd=0 Then ryuSpinsnd=LoadSound(soundsdir$ + "ryuspin.wav")
+EndIf
+
+If n=41 Then 	;Turtle CLoud
+	zpic(n,3,1)=zpic(n,1,0)
+	zpic_(n,3,1)=zpic_(n,1,0)
+	zpic(n,4,1)=zpic(n,1,0)
+	zpic_(n,4,1)=zpic_(n,1,0)
+        For i=0 To 7
+	 zpic(n,2,i)=zpic(n,1,0)
+	 zpic_(n,2,i)=zpic_(n,1,0)
+	Next
+	For i=1 To 3
+	 zpic(n,1,i)=zpic(n,1,0)
+	 zpic_(n,1,i)=zpic_(n,1,0)
+	Next
+EndIf
+
+If n=40 Then	;Turtle
+	zpic(n,1,3)=zpic(n,1,0)
+	zpic_(n,1,3)=zpic_(n,1,0)
+	zpic(n,2,2)=zpic(n,2,1)
+	zpic_(n,2,2)=zpic_(n,2,1)
+	zpic(n,2,4)=zpic(n,2,0)
+	zpic_(n,2,4)=zpic_(n,2,0)
+	zpic(n,2,7)=zpic(n,2,6)
+	zpic_(n,2,7)=zpic_(n,2,6)
+	zpic(n,4,1)=zpic(n,1,3)
+	zpic_(n,4,1)=zpic_(n,1,3)
+	zpic(n,3,1)=zpic(n,1,0)
+	zpic_(n,3,1)=zpic_(n,1,0)
+	zpic(n,6,5)=zpic_(n,6,3)
+	zpic_(n,6,5)=zpic(n,6,3)
+	For i=1 To 4
+	zpic(n,5,i)=zpic(n,1,0)
+	zpic_(n,5,i)=zpic_(n,1,0)
+	Next
+EndIf
+
+If n=39 Then	;Thief
+	zpic(n,4,1)=zpic(n,1,3)
+	zpic_(n,4,1)=zpic_(n,1,3)
+	zpic(n,3,1)=zpic(n,1,0)
+	zpic_(n,3,1)=zpic_(n,1,0)
+	For i=1 To 4
+	zpic(n,5,i)=zpic(n,1,0)
+	zpic_(n,5,i)=zpic_(n,1,0)
+	Next
+EndIf
+
+If n=38 Then	;Bowser
+	For i=0 To 7
+	zpic(n,2,i)=zpic(n,1,0)
+	zpic_(n,2,i)=zpic_(n,1,0)
+	Next
+	zpic(n,3,1)=zpic(n,1,0)
+	zpic_(n,3,1)=zpic_(n,1,0)
+	For i=1 To 4
+	zpic(n,5,i)=zpic(n,4,1)
+	zpic_(n,5,i)=zpic_(n,4,1)
+	Next
+EndIf
+
+If n=36 Or n=37 Then	;gargola, Red plant
+	zpic(n,1,2)=zpic(n,1,0)
+	zpic_(n,1,2)=zpic_(n,1,0)
+	zpic(n,1,3)=zpic(n,1,0)
+	zpic_(n,1,3)=zpic_(n,1,0)
+	For i=0 To 7
+	zpic(n,2,i)=zpic(n,1,1)
+	zpic_(n,2,i)=zpic_(n,1,1)
+	Next
+	zpic(n,4,1)=zpic(n,1,1)
+	zpic_(n,4,1)=zpic_(n,1,1)
+	zpic(n,3,1)=zpic(n,1,0)
+	zpic_(n,3,1)=zpic_(n,1,0)
+	For i=1 To 4
+	zpic(n,5,i)=zpic(n,1,1)
+	zpic_(n,5,i)=zpic_(n,1,1)
+	Next
+EndIf
+
+If n=35 Then	;red horns with shield
+	zpic(n,1,2)=zpic(n,1,1)
+	zpic_(n,1,2)=zpic_(n,1,1)
+	zpic(n,1,3)=zpic(n,1,0)
+	zpic_(n,1,3)=zpic_(n,1,0)
+
+	zpic(n,2,2)=zpic(n,2,1)
+	zpic_(n,2,2)=zpic_(n,2,1)
+	zpic(n,2,4)=zpic(n,2,0)
+	zpic_(n,2,4)=zpic_(n,2,0)
+	zpic(n,2,7)=zpic_(n,2,6)
+	zpic_(n,2,7)=zpic(n,2,6)
+	zpic(n,4,1)=zpic(n,1,1)
+	zpic_(n,4,1)=zpic_(n,1,1)
+	zpic(n,3,1)=zpic(n,1,1)
+	zpic_(n,3,1)=zpic_(n,1,1)
+	For i=1 To 4
+	zpic(n,5,i)=zpic(n,1,1)
+	zpic_(n,5,i)=zpic_(n,1,1)
+	Next
+EndIf
+
+If n=30 Then	;pig
+	zpic(n,2,3)=zpic(n,2,2)
+	zpic_(n,2,3)=zpic_(n,2,2)
+	zpic(n,4,1)=zpic(n,3,1)
+	zpic_(n,4,1)=zpic_(n,3,1)
+	zpic(n,6,2)=zpic_(n,2,5)
+	zpic_(n,6,2)=zpic(n,2,5)
+	For i=1 To 4
+	zpic(n,5,i)=zpic(n,4,1)
+	zpic_(n,5,i)=zpic_(n,4,1)
+	Next
+EndIf
+
+If n=33 Then	;Shredder
+	For i=2 To 4
+	zpic(n,5,i)=zpic(n,5,1)
+	zpic_(n,5,i)=zpic_(n,5,1)
+	Next
+	If shredderSnd=0 Then shredderSnd=LoadSound(soundsdir$ + "shredder.wav")
+	If shredder2Snd=0 Then shredder2Snd=LoadSound(soundsdir$ + "shredder2.wav")
+EndIf
+
+If n=32 Then	;foot clan
+	zpic(n,3,1)=zpic(n,1,0)
+	zpic_(n,3,1)=zpic_(n,1,0)
+	For i=1 To 4
+	zpic(n,5,i)=zpic(n,4,1)
+	zpic_(n,5,i)=zpic_(n,4,1)
+	Next
+EndIf
+
+If n=31 Then
+	zpic(n,2,2)=zpic(n,2,1)		;alien
+	zpic_(n,2,2)=zpic_(n,2,1)
+	zpic(n,1,3)=zpic(n,1,0)
+	zpic_(n,1,3)=zpic_(n,1,0)
+	zpic(n,3,1)=zpic(n,1,0)
+	zpic_(n,3,1)=zpic_(n,1,0)
+	zpic(n,2,4)=zpic(n,2,0)
+	zpic_(n,2,4)=zpic_(n,2,0)
+	zpic(n,2,7)=zpic(n,2,6)
+	zpic_(n,2,7)=zpic_(n,2,6)
+	zpic(n,4,1)=zpic(n,14,1)
+	zpic_(n,4,1)=zpic_(n,14,1)
+	For i=1 To 4
+	zpic(n,5,i)=zpic(n,4,1)
+	zpic_(n,5,i)=zpic_(n,4,1)
+	Next
+EndIf
+
+End Function
