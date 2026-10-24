@@ -3,7 +3,7 @@
 | Part | Owner / terms |
 |---|---|
 | `tools/`, `runtime/`, `android/`, `scripts/`, `build_android.sh`, `.github/`, `docs/` | Android port – MIT License (see `LICENSE`) |
-| `src/*.bb` | Original MultiHero 0.96 source code by the original MultiHero author, released as the "0.96 SHARED" source package. Included unchanged; it remains under its author's terms. |
+| `src/*.bb` | Original MultiHero 0.96 source code by **mhman**, the creator of MultiHero, released as the "0.96 SHARED" source package. Included unchanged; it remains under its author's terms. |
 | Game data (`gfx/`, `sounds/`, `Maps/`, `*.cfg`, `maps.dat`) | **Not included** in this repository. |
 
 ## Third-party characters
