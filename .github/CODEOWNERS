@@ -1,0 +1,6 @@
+# Setiap perubahan pada file berikut wajib di-review oleh pemilik
+/.github/FUNDING.yml  @richardyusan
+/.github/CODEOWNERS   @richardyusan
+/DONATE.md            @richardyusan
+/README.md            @richardyusan
+/assets/qr-*.png      @richardyusan
