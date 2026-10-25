@@ -145,3 +145,16 @@ The porting code (`tools/`, `runtime/`, `android/`, `scripts/`, build files, doc
 [MIT License](LICENSE). The original game source in `src/` belongs to its author, **mhman**, and the
 characters used by the game belong to their respective owners. See [NOTICE.md](NOTICE.md).
 MultiHero is a non-commercial fan project and is not affiliated with any of those companies.
+
+## Donation
+
+To support this porting project, you can donate:
+
+| Koin | Jaringan | Alamat |
+|---|---|---|
+| BTC | Bitcoin | `1455F5BFc41XKc1Tjg8himciuiZXtHdrsz` |
+| ETH | Ethereum (ERC-20) | `0x411bd0C7a9A18d5A66B79F8C8c9D2b214D4A8214` |
+| BNB | BNB Smart Chain (BEP-20) | `0x411bd0C7a9A18d5A66B79F8C8c9D2b214D4A8214` |
+| USDT | ERC-20 / BEP-20 | `0x411bd0C7a9A18d5A66B79F8C8c9D2b214D4A8214` |
+
+Details and QR code: [DONATE.md](DONATE.md)
