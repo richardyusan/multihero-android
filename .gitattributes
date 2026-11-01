@@ -1,0 +1,6 @@
+* text=auto
+*.sh text eol=lf
+*.bb text eol=crlf linguist-language=BlitzBasic
+*.png binary
+*.bmp binary
+*.wav binary

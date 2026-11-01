@@ -1,0 +1,29 @@
+# build output
+/build/
+*.apk
+*.aab
+*.o
+*.so
+*.ppm
+
+# game data (copyrighted / not redistributable here) - see game/README.md
+/game/*
+!/game/README.md
+
+# signing keys - never commit these
+*.keystore
+*.jks
+
+# misc
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# private online settings (EOS client secret)
+/config/online.local.cfg
+
+# Epic Online Services SDK + downloaded Android libraries (not redistributable here)
+/third_party/
