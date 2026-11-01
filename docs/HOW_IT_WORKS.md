@@ -51,6 +51,13 @@ Blitz semantics that are reproduced on purpose:
 - Input functions (`KeyHit`, `JoyHit`, `MouseHit` …) process OS events themselves, because some game
   loops wait for input without ever calling `Flip`.
 
+## Online layer (`runtime/net/`)
+
+`src/online.bb` draws the lobby with the game's own font and buttons and calls the `Net*` functions
+declared in `runtime/decls/net.decls`. `runtime/net/net.cpp` implements them on top of a `NetBackend`
+(`net.h`) chosen in `config/online.cfg`: offline demo, VPS relay client (`server/lobby_server.py`),
+or Epic Online Services. Details, protocol and server setup: [ONLINE.md](ONLINE.md).
+
 ## Testing without a phone
 
 `runtime/linux_main.cpp` runs the game headless. Environment variables:

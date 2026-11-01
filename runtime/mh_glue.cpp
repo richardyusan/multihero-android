@@ -4,7 +4,7 @@
 #include "bbrt.h"
 #include "platform.h"
 
-extern BArray<int> a_zcontroller, a_controllerport;
+extern BArray<int> a_zcontroller, a_controllerport, a_cheat;
 extern BArray<int> a_upk, a_downk, a_leftk, a_rightk, a_shotk, a_specialk, a_jumpk, a_blockk, a_grabk;
 
 int glue_player_uses_joy() { return a_zcontroller.nd ? (a_zcontroller(1) == 1) : 0; }
@@ -32,3 +32,5 @@ int glue_player_code(int vb) {
   }
   return defaults[vb];
 }
+
+int glue_cheat_unlocked() { return a_cheat.nd ? (a_cheat(1) == 1) : 0; }

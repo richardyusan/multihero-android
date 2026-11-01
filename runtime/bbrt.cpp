@@ -121,6 +121,7 @@ int bb_rand(int a, int b) {
   return (int)(a + (int64_t)(rnd01() * range));
 }
 float bb_rnd(float a) { return bb_rnd(0.0f, a); }
+int bb_portrngpeek() { std::mt19937 copy = g_rng; return (int)copy(); }
 float bb_rnd(float a, float b) { return (float)(a + rnd01() * (b - a)); }
 
 // =========================================================== time
@@ -1078,12 +1079,64 @@ int bb_joytype(int p) { return port_ok(p) ? 1 : 0; }
 int bb_joygetkey(int) { return 0; }
 
 // =========================================================== screen composition + touch overlay
+// The 640x480 game picture is centred in a frame with the phone's aspect ratio; the touch
+// controls are drawn in the side bars (and over the picture edges on narrower screens).
+
+// 16x16 pixel-art icons for the buttons ('#' = pixel)
+static const char *ICON_FIST[16] = {
+    "................", ".....##.##.##...", "....#########...", "....##########..",
+    "....##########..", "..############..", ".#############..", ".#############..",
+    ".############...", "..###########...", "...#########....", "....#######.....",
+    "....#######.....", "....#######.....", "................", "................"};
+static const char *ICON_JUMP[16] = {
+    ".......##.......", "......####......", ".....######.....", "....########....",
+    "...##########...", "..############..", ".....######.....", ".....######.....",
+    ".....######.....", ".....######.....", ".....######.....", "................",
+    "..############..", "..############..", "................", "................"};
+static const char *ICON_BOLT[16] = {
+    "........####....", ".......####.....", "......####......", ".....####.......",
+    "....####........", "...##########...", "..##########....", "......####......",
+    ".....####.......", "....####........", "...####.........", "..###...........",
+    ".##.............", "................", "................", "................"};
+static const char *ICON_SHIELD[16] = {
+    "................", "..############..", "..############..", "..############..",
+    "..############..", "..############..", "..############..", "...##########...",
+    "...##########...", "....########....", ".....######.....", "......####......",
+    ".......##.......", "................", "................", "................"};
+static const char *ICON_THROW[16] = {
+    "................", "........#######.", "..........#####.", ".........######.",
+    "........####.##.", ".......####..##.", "......####...##.", ".....####.......",
+    "....####........", "...####.........", "..####..........", ".####...........",
+    ".###............", "................", "................", "................"};
+static const char *ICON_LOCK[16] = {
+    ".....######.....", "....########....", "....##....##....", "....##....##....",
+    "....##..........", "..############..", "..############..", "..#####..#####..",
+    "..#####..#####..", "..######.#####..", "..############..", "..############..",
+    "................", "................", "................", "................"};
+static const char *ICON_CHECK[16] = {
+    "................", "..............##", ".............###", "............###.",
+    "...........###..", "..........###...", ".##......###....", ".###....###.....",
+    "..###..###......", "...######.......", "....####........", ".....##.........",
+    "................", "................", "................", "................"};
+
+static const char *ICON_JUTSU[16] = {
+    ".......##.......", "......####......", "......####......", ".....##..##.....",
+    "##..##......##..", "#######....#####", ".####...##...###", "..##...####...#.",
+    ".#...####...##..", "###...##...####.", "#####....#######", "..##......##..##",
+    ".....##..##.....", "......####......", "......####......", ".......##......."};
+
+enum { VBK_ACTION, VBK_KEY, VBK_UNLOCK, VBK_JUTSU };
 struct VButton {
-  int vb;            // VB_* or -1 for fixed scancode
-  int scancode;      // when vb == -1
-  float x, y, r;     // in screen pixels
+  int kind;          // VBK_*
+  int vb;            // VB_* for actions
+  int scancode;      // for VBK_KEY
+  float x, y, r;     // circle buttons: centre + radius; pills: x,y = top-left, r unused
+  float w, h;        // pills only (w > 0 means pill)
   const char *label;
+  const char *const *icon;
+  uint32_t color;
   bool down;
+  bool visible;
 };
 static std::vector<VButton> g_vbuttons;
 static std::vector<uint32_t> g_screen;
@@ -1093,6 +1146,56 @@ static std::map<int, int> g_touch_owner;   // touch id -> button index (or -1 = 
 static int g_dpad_touch = -999;
 static float g_dpad_cx, g_dpad_cy, g_dpad_r;
 static int g_dpad_dir[4];                  // up, down, left, right
+static int g_unlock_btn = -1;
+
+// --- which menu screen the game shows (PortScreen), the unlock macro and toast messages
+static int g_frame_no = 0;
+static int g_screen_id = 0, g_screen_frame = -100;
+static std::vector<std::pair<int, bool>> g_macro;   // queued key events, one per frame
+static int g_macro_state = 0;                       // 0 idle, 1 running, 2 waiting for result
+static int g_macro_was_unlocked = 0;
+static std::string g_toast;
+static int64_t g_toast_until = 0;
+
+void bb_portscreen(int id) {
+  g_screen_id = id;
+  g_screen_frame = g_frame_no;
+}
+static bool on_main_menu() { return g_screen_id == 1 && g_frame_no - g_screen_frame <= 3; }
+// the online lobby (PortScreen 2) has buttons where the D-pad / action buttons would be
+static bool hide_fight_controls() { return g_screen_id == 2 && g_frame_no - g_screen_frame <= 3; }
+static void toast(const std::string &t, int ms = 2500) {
+  g_toast = t;
+  g_toast_until = plat_ms() + ms;
+}
+
+// The game's own cheat (menus.bb, mainMenu): BACKSPACE x5 then ENTER unlocks all characters
+// and all VS stages. The macro presses ENTER first so the game's counter starts from zero.
+static void start_unlock_macro() {
+  if (g_macro_state) return;
+  g_macro_was_unlocked = glue_cheat_unlocked();
+  g_macro.clear();
+  g_macro.push_back({28, true});
+  g_macro.push_back({28, false});
+  for (int i = 0; i < 5; i++) { g_macro.push_back({14, true}); g_macro.push_back({14, false}); }
+  g_macro.push_back({28, true});
+  g_macro.push_back({28, false});
+  g_macro_state = 1;
+}
+static void run_macro() {
+  if (g_macro_state == 1) {
+    if (!on_main_menu()) { g_macro.clear(); g_macro_state = 0; return; }
+    if (!g_macro.empty()) {
+      rt_key(g_macro.front().first, g_macro.front().second);
+      g_macro.erase(g_macro.begin());
+    } else g_macro_state = 2;
+  } else if (g_macro_state == 2) {
+    if (glue_cheat_unlocked()) {
+      toast(g_macro_was_unlocked ? "ALREADY UNLOCKED" : "ALL CHARACTERS & MAPS UNLOCKED!");
+    }
+    g_macro_state = 0;
+  }
+}
 
 static void layout_screen() {
   float aspect = plat_screen_aspect();
@@ -1103,26 +1206,79 @@ static void layout_screen() {
   g_game_x = (g_scr_w - g_gfx_w) / 2;
   g_screen.assign((size_t)g_scr_w * g_scr_h, 0);
   g_vbuttons.clear();
-  float side = (float)g_game_x;           // width of each side panel
-  bool roomy = side >= 110;
-  // d-pad on the left
-  g_dpad_r = roomy ? std::min(side * 0.42f, 95.0f) : 70.0f;
-  g_dpad_cx = roomy ? side / 2 : 85;
-  g_dpad_cy = g_scr_h - g_dpad_r - 40;
-  // action buttons on the right, arranged like a game pad (diamond + one extra)
-  float br = roomy ? std::min(std::min(side * 0.19f, 36.0f), (side - 8) / 5.1f) : 28.0f;
-  float rx = roomy ? g_scr_w - side / 2 : g_scr_w - 95;
-  float cy = g_scr_h - (br * 2.6f) - 30;
-  float d = br * 1.55f;
-  g_vbuttons.push_back({VB_SHOT, 0, rx, cy + d, br, "ATTACK", false});
-  g_vbuttons.push_back({VB_JUMP, 0, rx + d, cy, br, "JUMP", false});
-  g_vbuttons.push_back({VB_SPECIAL, 0, rx - d, cy, br, "SPECIAL", false});
-  g_vbuttons.push_back({VB_BLOCK, 0, rx, cy - d, br, "BLOCK", false});
-  g_vbuttons.push_back({VB_GRAB, 0, rx, cy - d * 2.25f, br * 0.8f, "THROW", false});
-  // system buttons at the top
-  float sr = 20;
-  g_vbuttons.push_back({-1, 1, roomy ? side / 2 : 30.0f, 30, sr, "ESC", false});
-  g_vbuttons.push_back({-1, 28, roomy ? g_scr_w - side / 2 : g_scr_w - 30.0f, 30, sr, "OK", false});
+  float side = (float)g_game_x;
+  float H = (float)g_scr_h, W = (float)g_scr_w;
+
+  // D-pad, bottom left
+  g_dpad_r = 108;
+  g_dpad_cx = std::max(side / 2, g_dpad_r + 12);
+  g_dpad_cy = H - g_dpad_r - 12;
+
+  // action buttons, bottom right: ATTACK / JUMP / SPECIAL / BLOCK diamond + THROW
+  // sizes are in the 480-pixel-high composite (x2.25 on a 1080p phone): main buttons 96 px wide
+  float br = 48, d = br * 1.5f, sr = 36;
+  float cx = W - std::max(side / 2, d + br + 12), cy = H - d - br - 10;
+  auto act = [&](int vb, float x, float y, float r, const char *lab, const char *const *ic, uint32_t col) {
+    VButton b{};
+    b.kind = VBK_ACTION; b.vb = vb; b.x = x; b.y = y; b.r = r;
+    b.label = lab; b.icon = ic; b.color = col; b.visible = true;
+    g_vbuttons.push_back(b);
+  };
+  act(VB_SHOT, cx, cy + d, br, "ATTACK", ICON_FIST, 0xe03c3c);
+  act(VB_JUMP, cx + d, cy, br, "JUMP", ICON_JUMP, 0x34b050);
+  act(VB_SPECIAL, cx - d, cy, br, "SPECIAL", ICON_BOLT, 0x3c64e0);
+  act(VB_BLOCK, cx, cy - d, br, "BLOCK", ICON_SHIELD, 0xe0a828);
+  act(VB_GRAB, cx + d + 6, cy - d - 34, sr, "THROW", ICON_THROW, 0x9c50d0);
+  // JUTSU = hold BLOCK + press SPECIAL (the game's super move, superKey in mh.bb)
+  act(VB_SPECIAL, cx - d - 6, cy - d - 34, sr, "JUTSU", ICON_JUTSU, 0xe0602c);
+  g_vbuttons.back().kind = VBK_JUTSU;
+
+  // pills at the top: ESC (left), OK (right), UNLOCK ALL (left, main menu only)
+  auto pill = [&](int kind, int sc, float x, float y, float w, float h, const char *lab,
+                  const char *const *ic, uint32_t col) {
+    VButton b{};
+    b.kind = kind; b.scancode = sc; b.x = x; b.y = y; b.w = w; b.h = h;
+    b.label = lab; b.icon = ic; b.color = col; b.visible = kind != VBK_UNLOCK;
+    g_vbuttons.push_back(b);
+  };
+  float pw = std::min(std::max(side - 24, 76.0f), 110.0f);
+  pill(VBK_KEY, 1, 12, 12, pw, 36, "ESC", nullptr, 0x505a78);
+  pill(VBK_KEY, 28, W - 12 - pw, 12, pw, 36, "OK", nullptr, 0x2f8a5a);
+  g_unlock_btn = (int)g_vbuttons.size();
+  pill(VBK_UNLOCK, 0, 12, 58, std::max(pw, 150.0f), 36, "UNLOCK ALL", ICON_LOCK, 0xc08a20);
+}
+
+static void key_for_vb(int vb, bool down);
+// several sources may hold the same action (touch BLOCK + JUTSU, gamepad, ...): count presses and
+// only send the key down on the first press and the key up on the last release
+static int g_vb_count[VB_COUNT];
+static void vb_press(int vb, bool down) {
+  if (vb < 0 || vb >= VB_COUNT) return;
+  int &c = g_vb_count[vb];
+  if (down) { if (c++ == 0) key_for_vb(vb, true); }
+  else if (c > 0 && --c == 0) key_for_vb(vb, false);
+}
+
+// JUTSU: frame 0 BLOCK down, frame 1 SPECIAL down (game sees BLOCK held + SPECIAL hit = super move),
+// frame 3 SPECIAL up, BLOCK up when the finger is lifted
+struct JutsuState { bool active = false, held = false; int stage = 0, frame = 0; };
+static JutsuState g_jutsu;
+static int g_frame_no_fwd() { return g_frame_no; }
+static void jutsu_press(bool down) {
+  if (down) {
+    if (g_jutsu.active) return;
+    g_jutsu.active = g_jutsu.held = true;
+    g_jutsu.stage = 1;
+    g_jutsu.frame = g_frame_no_fwd();
+    vb_press(VB_BLOCK, true);
+  } else g_jutsu.held = false;
+}
+static void jutsu_tick() {
+  if (!g_jutsu.active) return;
+  int f = g_frame_no_fwd();
+  if (g_jutsu.stage == 1 && f >= g_jutsu.frame + 1) { vb_press(VB_SPECIAL, true); g_jutsu.stage = 2; g_jutsu.frame = f; }
+  else if (g_jutsu.stage == 2 && f >= g_jutsu.frame + 2) { vb_press(VB_SPECIAL, false); g_jutsu.stage = 3; }
+  else if (g_jutsu.stage == 3 && !g_jutsu.held) { vb_press(VB_BLOCK, false); g_jutsu = JutsuState(); }
 }
 
 static void key_for_vb(int vb, bool down) {
@@ -1136,7 +1292,7 @@ static void update_dpad(float x, float y, bool active) {
   int nd[4] = {0, 0, 0, 0};
   if (active) {
     float dx = x - g_dpad_cx, dy = y - g_dpad_cy;
-    float dead = g_dpad_r * 0.25f;
+    float dead = g_dpad_r * 0.22f;
     if (dx * dx + dy * dy > dead * dead) {
       float ang = atan2f(dy, dx) * 57.2958f;    // 0 = right, 90 = down
       if (ang > -67.5f && ang < 67.5f) nd[3] = 1;
@@ -1149,7 +1305,7 @@ static void update_dpad(float x, float y, bool active) {
   for (int i = 0; i < 4; i++)
     if (nd[i] != g_dpad_dir[i]) {
       g_dpad_dir[i] = nd[i];
-      key_for_vb(vbmap[i], nd[i] != 0);
+      vb_press(vbmap[i], nd[i] != 0);
       // menus are driven by the arrow keys too
       static const int arrows[4] = {200, 208, 203, 205};
       if (glue_player_code(vbmap[i]) != arrows[i]) rt_key(arrows[i], nd[i] != 0);
@@ -1164,25 +1320,44 @@ static void set_button(int i, bool down) {
   VButton &b = g_vbuttons[i];
   if (b.down == down) return;
   b.down = down;
-  if (b.vb < 0) rt_key(b.scancode, down);
-  else key_for_vb(b.vb, down);
+  if (b.kind == VBK_KEY) rt_key(b.scancode, down);
+  else if (b.kind == VBK_ACTION) vb_press(b.vb, down);
+  else if (b.kind == VBK_JUTSU) jutsu_press(down);
+  else if (b.kind == VBK_UNLOCK && down) start_unlock_macro();
+}
+
+// distance from a touch to a button (<= 0 inside); pills are rounded rectangles
+static float button_distance(const VButton &b, float x, float y) {
+  if (b.w > 0) {
+    float dx = std::max(std::max(b.x - x, x - (b.x + b.w)), 0.0f);
+    float dy = std::max(std::max(b.y - y, y - (b.y + b.h)), 0.0f);
+    return sqrtf(dx * dx + dy * dy);
+  }
+  return sqrtf((x - b.x) * (x - b.x) + (y - b.y) * (y - b.y)) - b.r;
 }
 
 void rt_touch(int id, float nx, float ny, int action) {
   float x = nx * g_scr_w, y = ny * g_scr_h;
   if (action == 0) {
     if (g_overlay) {
+      // the closest button wins; a little slack around each button makes them easy to hit
+      int best = -1;
+      float bestd = 1e9f;
       for (size_t i = 0; i < g_vbuttons.size(); i++) {
-        VButton &b = g_vbuttons[i];
-        float dx = x - b.x, dy = y - b.y, rr = b.r * 1.35f;
-        if (dx * dx + dy * dy <= rr * rr) {
-          g_touch_owner[id] = (int)i;
-          set_button((int)i, true);
-          return;
-        }
+        const VButton &b = g_vbuttons[i];
+        if (!b.visible) continue;
+        if ((b.kind == VBK_ACTION || b.kind == VBK_JUTSU) && hide_fight_controls()) continue;
+        float d = button_distance(b, x, y);
+        float slack = b.w > 0 ? 8.0f : b.r * 0.3f;
+        if (d <= slack && d < bestd) { bestd = d; best = (int)i; }
+      }
+      if (best >= 0) {
+        g_touch_owner[id] = best;
+        set_button(best, true);
+        return;
       }
       float dx = x - g_dpad_cx, dy = y - g_dpad_cy;
-      if (dx * dx + dy * dy <= g_dpad_r * g_dpad_r * 1.8f && g_dpad_touch == -999) {
+      if (!hide_fight_controls() && dx * dx + dy * dy <= g_dpad_r * g_dpad_r * 1.6f && g_dpad_touch == -999) {
         g_dpad_touch = id;
         g_touch_owner[id] = -2;
         update_dpad(x, y, true);
@@ -1214,12 +1389,22 @@ void rt_touch(int id, float nx, float ny, int action) {
   }
   if (action == 2) g_touch_owner.erase(it);
 }
+// desktop mouse (web backend): x,y in 0..1 of the screen; button 0 = move only
+void rt_mouse(float nx, float ny, int button, bool down) {
+  std::lock_guard<std::mutex> lk(g_in_mx);
+  g_mouse_x = std::max(0, std::min(g_gfx_w - 1, (int)(nx * g_scr_w - g_game_x)));
+  g_mouse_y = std::max(0, std::min(g_gfx_h - 1, (int)(ny * g_scr_h)));
+  if (button >= 1 && button <= 3) {
+    if (down && !g_mouse_down[button]) g_mouse_hits[button]++;
+    g_mouse_down[button] = down;
+  }
+}
 void rt_vbutton(int vb, bool down) {
   // physical game pad / keyboard mapped to the player's actions
   static bool state[VB_COUNT];
   if (vb < 0 || vb >= VB_COUNT || state[vb] == down) return;
   state[vb] = down;
-  key_for_vb(vb, down);
+  vb_press(vb, down);
   if (vb <= VB_RIGHT) {
     static const int arrows[4] = {200, 208, 203, 205};
     if (glue_player_code(vb) != arrows[vb]) rt_key(arrows[vb], down);
@@ -1236,33 +1421,180 @@ void rt_touch_cancel_all() {
   g_mouse_down[1] = false;
 }
 
+// ---------------------------------------------------------------- overlay drawing
 static inline uint32_t blend(uint32_t d, uint32_t s, int a) {
+  if (a <= 0) return d;
+  if (a >= 256) return s;
   uint32_t rb = ((d & 0xff00ff) * (256 - a) + (s & 0xff00ff) * a) >> 8;
   uint32_t g = ((d & 0x00ff00) * (256 - a) + (s & 0x00ff00) * a) >> 8;
   return (rb & 0xff00ff) | (g & 0x00ff00);
 }
-static void circle(float cx, float cy, float r, uint32_t col, int alpha, bool ring) {
-  int x0 = (int)(cx - r - 1), x1 = (int)(cx + r + 1), y0 = (int)(cy - r - 1), y1 = (int)(cy + r + 1);
-  for (int y = std::max(0, y0); y <= std::min(g_scr_h - 1, y1); y++)
-    for (int x = std::max(0, x0); x <= std::min(g_scr_w - 1, x1); x++) {
+static inline uint32_t shade(uint32_t c, float f) {   // f < 1 darker, > 1 lighter
+  int r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255;
+  auto ch = [f](int v) {
+    float o = f <= 1 ? v * f : v + (255 - v) * (f - 1);
+    return std::max(0, std::min(255, (int)o));
+  };
+  return (uint32_t)(ch(r) << 16 | ch(g) << 8 | ch(b));
+}
+static inline void spix(int x, int y, uint32_t c, int a) {
+  if ((unsigned)x < (unsigned)g_scr_w && (unsigned)y < (unsigned)g_scr_h) {
+    uint32_t &p = g_screen[(size_t)y * g_scr_w + x];
+    p = blend(p, c, a);
+  }
+}
+// anti-aliased disc with a vertical light-to-dark gradient
+static void disc(float cx, float cy, float r, uint32_t top, uint32_t bottom, int alpha) {
+  for (int y = (int)(cy - r - 1); y <= (int)(cy + r + 1); y++)
+    for (int x = (int)(cx - r - 1); x <= (int)(cx + r + 1); x++) {
       float dx = x + 0.5f - cx, dy = y + 0.5f - cy, d = sqrtf(dx * dx + dy * dy);
-      if (d > r) continue;
-      if (ring && d < r - 3) continue;
-      uint32_t &p = g_screen[(size_t)y * g_scr_w + x];
-      p = blend(p, col, alpha);
+      float cov = std::min(1.0f, std::max(0.0f, r - d + 0.5f));
+      if (cov <= 0) continue;
+      float t = std::min(1.0f, std::max(0.0f, (dy + r) / (2 * r)));
+      uint32_t c = blend(top, bottom, (int)(t * 256));
+      spix(x, y, c, (int)(alpha * cov));
     }
 }
-static void screen_text(int x, int y, const char *s, uint32_t c) {
-  Image tmp;
-  tmp.w = g_scr_w; tmp.h = g_scr_h;
-  tmp.px.swap(g_screen);
-  draw_glyphs(&tmp, x, y, s, c);
-  tmp.px.swap(g_screen);
+static void ring(float cx, float cy, float r, float width, uint32_t c, int alpha) {
+  for (int y = (int)(cy - r - 1); y <= (int)(cy + r + 1); y++)
+    for (int x = (int)(cx - r - 1); x <= (int)(cx + r + 1); x++) {
+      float dx = x + 0.5f - cx, dy = y + 0.5f - cy, d = sqrtf(dx * dx + dy * dy);
+      float cov = std::min(std::min(1.0f, std::max(0.0f, r - d + 0.5f)), std::min(1.0f, std::max(0.0f, d - (r - width) + 0.5f)));
+      if (cov > 0) spix(x, y, c, (int)(alpha * cov));
+    }
+}
+// anti-aliased rounded rectangle with a vertical gradient
+static void rrect(float x0, float y0, float w, float h, float rad, uint32_t top, uint32_t bottom, int alpha) {
+  for (int y = (int)y0; y <= (int)(y0 + h); y++)
+    for (int x = (int)x0; x <= (int)(x0 + w); x++) {
+      float px = x + 0.5f, py = y + 0.5f;
+      float qx = std::max(std::max(x0 + rad - px, px - (x0 + w - rad)), 0.0f);
+      float qy = std::max(std::max(y0 + rad - py, py - (y0 + h - rad)), 0.0f);
+      float d = sqrtf(qx * qx + qy * qy) - rad;
+      float edge = std::min(std::min(px - x0, x0 + w - px), std::min(py - y0, y0 + h - py));
+      float cov = std::min(1.0f, std::max(0.0f, std::min(-d + 0.5f, edge + 0.5f)));
+      if (cov <= 0) continue;
+      float t = std::min(1.0f, std::max(0.0f, (py - y0) / h));
+      spix(x, y, blend(top, bottom, (int)(t * 256)), (int)(alpha * cov));
+    }
+}
+static void icon(const char *const *ic, float cx, float cy, int scale, uint32_t c, int alpha) {
+  int x0 = (int)(cx - 8 * scale), y0 = (int)(cy - 8 * scale);
+  for (int pass = 0; pass < 2; pass++)     // drop shadow, then the icon
+    for (int r = 0; r < 16; r++)
+      for (int q = 0; q < 16; q++)
+        if (ic[r][q] == '#')
+          for (int sy = 0; sy < scale; sy++)
+            for (int sx = 0; sx < scale; sx++) {
+              if (pass == 0) spix(x0 + q * scale + sx + 2, y0 + r * scale + sy + 2, 0x000000, alpha / 3);
+              else spix(x0 + q * scale + sx, y0 + r * scale + sy, c, alpha);
+            }
+}
+static void text(int x, int y, const char *s, uint32_t c, int alpha = 256) {
+  for (size_t i = 0; s[i]; i++) {
+    unsigned ch = (unsigned char)s[i];
+    if (ch < 32 || ch > 126) ch = '?';
+    const uint8_t *g = FONT8X16[ch - 32];
+    for (int r = 0; r < FONT_H; r++)
+      for (int b = 0; b < 8; b++)
+        if (g[r] & (0x80 >> b)) {
+          spix(x + (int)i * 8 + b + 1, y + r + 1, 0x000000, alpha / 2);
+          spix(x + (int)i * 8 + b, y + r, c, alpha);
+        }
+  }
+}
+static void text_center(float cx, int y, const char *s, uint32_t c, int alpha = 256) {
+  text((int)(cx - strlen(s) * 4), y, s, c, alpha);
+}
+static bool over_game(float x0, float x1) { return x1 > g_game_x && x0 < g_game_x + g_gfx_w; }
+static void triangle(float cx, float cy, float size, int dir, uint32_t c, int alpha) {
+  // dir: 0 up, 1 down, 2 left, 3 right
+  for (int y = (int)(cy - size); y <= (int)(cy + size); y++)
+    for (int x = (int)(cx - size); x <= (int)(cx + size); x++) {
+      float u = x + 0.5f - cx, v = y + 0.5f - cy;
+      float along = dir == 0 ? -v : dir == 1 ? v : dir == 2 ? -u : u;      // towards the tip
+      float across = (dir < 2) ? u : v;
+      if (along < -size * 0.5f || along > size * 0.6f) continue;
+      float half = (size * 0.6f - along) * 0.75f;
+      float cov = std::min(1.0f, std::max(0.0f, half - fabsf(across) + 0.5f));
+      if (cov > 0) spix(x, y, c, (int)(alpha * cov));
+    }
+}
+
+static void draw_dpad() {
+  float cx = g_dpad_cx, cy = g_dpad_cy, R = g_dpad_r;
+  bool faint = over_game(cx - R, cx + R);
+  int a = faint ? 150 : 225;
+  disc(cx, cy, R, 0x2a2e40, 0x14161f, a * 3 / 4);
+  ring(cx, cy, R, 3, 0x6a7090, a);
+  float arm = R * 0.36f, len = R * 0.80f;
+  // cross
+  rrect(cx - arm, cy - len, arm * 2, len * 2, 10, 0x4a4f66, 0x2c3042, a);
+  rrect(cx - len, cy - arm, len * 2, arm * 2, 10, 0x4a4f66, 0x2c3042, a);
+  disc(cx, cy, arm * 0.7f, 0x23263a, 0x34384e, a);
+  const float ax[4] = {0, 0, -1, 1}, ay[4] = {-1, 1, 0, 0};
+  for (int i = 0; i < 4; i++) {
+    float px = cx + ax[i] * len * 0.62f, py = cy + ay[i] * len * 0.62f;
+    if (g_dpad_dir[i]) disc(px, py, arm * 0.95f, 0xffe27a, 0xd8a020, 230);
+    triangle(px, py, arm * 0.75f, i, g_dpad_dir[i] ? 0x3a2a00 : 0xe8ecff, a);
+  }
+}
+
+static void draw_action(const VButton &b) {
+  bool faint = over_game(b.x - b.r, b.x + b.r);
+  int a = faint ? 170 : 240;
+  float r = b.down ? b.r * 0.93f : b.r;
+  uint32_t base = b.down ? shade(b.color, 1.35f) : b.color;
+  disc(b.x + 2, b.y + 4, r, 0x000000, 0x000000, a / 3);                 // shadow
+  disc(b.x, b.y, r, shade(base, 1.25f), shade(base, 0.55f), a);           // body
+  disc(b.x, b.y - r * 0.35f, r * 0.62f, shade(base, 1.6f), shade(base, 1.05f), a / 3);  // gloss
+  ring(b.x, b.y, r, 2.5f, shade(base, 0.35f), a);
+  ring(b.x, b.y, r - 2.5f, 1.5f, shade(base, 1.7f), a / 2);
+  int scale = r >= 44 ? 3 : 2;
+  bool label = b.r >= 34;
+  icon(b.icon, b.x, b.y - (label ? (scale == 3 ? 9 : 7) : 0), scale, 0xffffff, a);
+  if (label) text_center(b.x, (int)(b.y + r * 0.38f), b.label, 0xffffff, a);
+  else if (!faint) text_center(b.x, (int)(b.y + r + 2), b.label, 0xd8d8e8, a);
+}
+
+static void draw_pill(const VButton &b, bool done) {
+  int a = 235;
+  uint32_t base = done ? 0x2f8a4a : (b.down ? shade(b.color, 1.35f) : b.color);
+  rrect(b.x + 2, b.y + 3, b.w, b.h, b.h / 2, 0x000000, 0x000000, a / 3);
+  rrect(b.x, b.y, b.w, b.h, b.h / 2, shade(base, 1.3f), shade(base, 0.6f), a);
+  const char *lab = done ? "UNLOCKED" : b.label;
+  float tx = b.x + b.w / 2;
+  if (b.icon) {
+    const char *const *ic = done ? ICON_CHECK : b.icon;
+    float total = 16 + 6 + strlen(lab) * 8;
+    float ix = b.x + (b.w - total) / 2 + 8;
+    icon(ic, ix, b.y + b.h / 2, 1, 0xffffff, a);
+    text((int)(ix + 14), (int)(b.y + b.h / 2 - 8), lab, 0xffffff, a);
+  } else {
+    if (b.scancode == 1) {   // ESC: back arrow
+      triangle(b.x + 18, b.y + b.h / 2, 8, 2, 0xffffff, a);
+      text((int)(b.x + 28 + (b.w - 28 - strlen(lab) * 8) / 2), (int)(b.y + b.h / 2 - 8), lab, 0xffffff, a);
+    } else {
+      text_center(tx, (int)(b.y + b.h / 2 - 8), lab, 0xffffff, a);
+    }
+  }
+}
+
+static void draw_toast() {
+  if (g_toast.empty() || plat_ms() > g_toast_until) return;
+  float w = g_toast.size() * 8 + 40, h = 40;
+  float x = (g_scr_w - w) / 2, y = 96;
+  rrect(x + 2, y + 3, w, h, 12, 0x000000, 0x000000, 90);
+  rrect(x, y, w, h, 12, 0x3a9a5a, 0x1d5c34, 240);
+  text_center(g_scr_w / 2.0f, (int)(y + 12), g_toast.c_str(), 0xffffff);
 }
 
 static void present_frame() {
   Image *f = img(g_front);
   if (!f) return;
+  g_frame_no++;
+  run_macro();
+  jutsu_tick();
   int aspect_now = (int)(plat_screen_aspect() * 1000);
   static int aspect_prev = -1;
   static int overlay_prev = -1;
@@ -1271,33 +1603,34 @@ static void present_frame() {
     overlay_prev = plat_touch_overlay();
     layout_screen();
   }
-  // side panels
-  std::fill(g_screen.begin(), g_screen.end(), 0x101018);
+  // side panels: dark gradient with a thin frame next to the picture
+  for (int y = 0; y < g_scr_h; y++) {
+    uint32_t c = blend(0x1a1d2a, 0x0c0d14, y * 256 / g_scr_h);
+    std::fill(g_screen.begin() + (size_t)y * g_scr_w, g_screen.begin() + (size_t)(y + 1) * g_scr_w, c);
+  }
   for (int y = 0; y < g_gfx_h && y < g_scr_h; y++)
     memcpy(&g_screen[(size_t)y * g_scr_w + g_game_x], &f->px[(size_t)y * f->w], g_gfx_w * 4);
+  if (g_game_x > 2)
+    for (int y = 0; y < g_scr_h; y++) {
+      g_screen[(size_t)y * g_scr_w + g_game_x - 1] = 0x3a3f58;
+      g_screen[(size_t)y * g_scr_w + g_game_x + g_gfx_w] = 0x3a3f58;
+    }
   if (g_overlay) {
-    bool inside = g_game_x < 110;     // controls overlap the picture: make them fainter
-    int a = inside ? 70 : 140;
-    circle(g_dpad_cx, g_dpad_cy, g_dpad_r, 0x808090, a / 2, false);
-    circle(g_dpad_cx, g_dpad_cy, g_dpad_r, 0xc0c0d0, a, true);
-    float o = g_dpad_r * 0.62f, rr = g_dpad_r * 0.28f;
-    const float ax[4] = {0, 0, -1, 1}, ay[4] = {-1, 1, 0, 0};
-    for (int i = 0; i < 4; i++)
-      circle(g_dpad_cx + ax[i] * o, g_dpad_cy + ay[i] * o, rr, g_dpad_dir[i] ? 0xffd040 : 0xd0d0e0, g_dpad_dir[i] ? 200 : a, false);
+    if (g_unlock_btn >= 0) {
+      VButton &u = g_vbuttons[g_unlock_btn];
+      u.visible = on_main_menu();
+      if (!u.visible && u.down) u.down = false;
+    }
+    bool fight = !hide_fight_controls();
+    if (fight) draw_dpad();
     for (auto &b : g_vbuttons) {
-      uint32_t col = b.vb < 0 ? 0x6080a0 : 0xd04040;
-      if (b.vb == VB_JUMP) col = 0x40a040;
-      if (b.vb == VB_SPECIAL) col = 0x4060d0;
-      if (b.vb == VB_BLOCK) col = 0xc0a030;
-      if (b.vb == VB_GRAB) col = 0xa050c0;
-      circle(b.x, b.y, b.r, b.down ? 0xffffff : col, b.down ? 220 : a + 40, false);
-      const char *lab = b.label;
-      char shortlab[2] = {b.label[0], 0};
-      if ((int)strlen(lab) * 8 > b.r * 2 + 6) lab = shortlab;
-      int len = (int)strlen(lab);
-      screen_text((int)b.x - len * 4, (int)b.y - 8, lab, 0xffffff);
+      if (!b.visible) continue;
+      if ((b.kind == VBK_ACTION || b.kind == VBK_JUTSU) && !fight) continue;
+      if (b.w > 0) draw_pill(b, b.kind == VBK_UNLOCK && glue_cheat_unlocked() && g_macro_state == 0);
+      else draw_action(b);
     }
   }
+  draw_toast();
   // hard frame cap: never present faster than 60 fps
   static double next_present = 0;
   double tnow = (double)plat_ms();
@@ -1320,6 +1653,8 @@ static void present_frame() {
   }
 }
 
+void net_background_tick();   // runtime/net/net.cpp: keeps an online service ticking outside the lobby
+
 void bb_flip(int vwait) {
   // the 60 fps cap in present_frame() plays the role of the vertical blank
   (void)vwait;
@@ -1330,6 +1665,7 @@ void bb_flip(int vwait) {
   g_pres_front_dirty = false;
   present_frame();
   plat_pump();
+  net_background_tick();
 }
 void bb_vwait(int) { plat_pump(); }
 

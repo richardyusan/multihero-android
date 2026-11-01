@@ -22,6 +22,7 @@ SOFTWARE.
 
 -------------------------------------------------------------------------------
 Scope: this license covers the porting code written for this project:
-tools/, runtime/, android/, scripts/, build_android.sh, .github/ and docs/.
+tools/, runtime/, android/, scripts/, server/, config/, src/online.bb,
+build_android.sh, .github/ and docs/.
 It does NOT cover the original MultiHero game source in src/ or the game data
 (graphics, sounds, maps). See NOTICE.md.

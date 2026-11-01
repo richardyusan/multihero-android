@@ -5,15 +5,16 @@ set -e
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
 GAME_DIR="${1:-$HERE/game}"
 mkdir -p "$HERE/build"
-python3 "$HERE/tools/bb2cpp.py" "$HERE/src/mh.bb" "$HERE/build/mh.cpp"
-g++ -std=c++17 -O2 -fwrapv -w -I"$HERE/runtime" "$HERE/build/mh.cpp" "$HERE/runtime/bbrt.cpp" \
-    "$HERE/runtime/mh_glue.cpp" "$HERE/runtime/linux_main.cpp" -o "$HERE/build/mh_linux" -lpthread
+python3 "$HERE/tools/bb2cpp.py" "$HERE/src/mh.bb" "$HERE/build/mh.cpp" "$HERE"/runtime/decls/*.decls
+g++ -std=c++17 -O2 -fwrapv -ffp-contract=off -w -I"$HERE/runtime" "$HERE/build/mh.cpp" "$HERE/runtime/bbrt.cpp" \
+    "$HERE/runtime/mh_glue.cpp" "$HERE/runtime/linux_main.cpp" "$HERE"/runtime/net/*.cpp \
+    -o "$HERE/build/mh_linux" -lpthread
 echo "built build/mh_linux"
 if [ ! -f "$GAME_DIR/maps.dat" ]; then
   echo "no game data in '$GAME_DIR' - skipping the run (see game/README.md)"
   exit 0
 fi
-python3 "$HERE/tools/prep_assets.py" "$GAME_DIR" "$HERE/build/assets"
+python3 "$HERE/tools/prep_assets.py" "$GAME_DIR" "$HERE/build/assets" "$HERE/config"
 rm -rf "$HERE/build/shots" "$HERE/build/testdata"; mkdir -p "$HERE/build/shots"
 cat > "$HERE/build/smoke.txt" <<'S'
 60 shot

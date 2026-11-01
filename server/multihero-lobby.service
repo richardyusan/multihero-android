@@ -1,0 +1,17 @@
+# systemd unit for the MultiHero lobby server
+#   sudo cp multihero-lobby.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now multihero-lobby
+[Unit]
+Description=MultiHero lobby/relay server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=ubuntu
+ExecStart=/usr/bin/python3 /opt/multihero/lobby_server.py --port 7777
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

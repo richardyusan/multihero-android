@@ -1,6 +1,35 @@
 ;----------------------------- pig's moves! -----------------------------------
 Function DoPig(n)
+;[android port] the 0.96 source had no moves for this enemy: once it started an attack it stayed
+;stuck in it and never hurt anybody. Simple bite using the only attack sprite (zblow1).
+zFace(n)=zBlowDir(n)
+zBlowEffect(n)=0
 
+	If zBlowStill(n)=1 Then
+		zBlowStillSeq(n)=zBlowStillSeq(n)+1
+		If zBlowStillSeq(n) > zBlowStillTime(n) Then zBlowStill(n)=0
+		Goto noBlowSeq30
+	EndIf
+
+zBlowSeq(n)=zBlowSeq(n)+1
+.noBlowSeq30
+zchunkType(n)=5
+
+Select zCurBlow(n)
+Case 0	;no block animation: stop blocking at once
+	zBlowSeq(n)=0:zBlow(n)=0:zBlock(n)=0
+Default	;bite
+	a=7: b=a+10: c=b+8
+	If zCurBlow(n) <> 2 Then zNoMove(n)=1: zNoJump(n)=1
+	If zBlowSeq(n) => 1 And zBlowSeq(n) < a Then zani(n)=1:zf(n)=0
+	If zBlowSeq(n) => a And zBlowSeq(n) < b Then
+		zani(n)=6:zf(n)=1
+		portBlow(n,0,17,10,20,28,4,40,12,rashHitSnd)
+	EndIf
+	If zBlowSeq(n) => b Then zani(n)=1:zf(n)=0
+	If zBlowSeq(n) => c Then zBlowSeq(n)=0:zBlow(n)=0
+	If zCurBlow(n)=2 And zongnd(n)=1 And zBlowSeq(n) > a Then zBlow(n)=0:zBlowSeq(n)=0
+End Select
 
 End Function
 
@@ -226,12 +255,168 @@ End Function
 
 ;----------------------------- shredder's moves! -----------------------------------
 Function DoShredder(n)
+;[android port] moves written for the port (the 0.96 source left this function empty, so the
+;enemy froze after its first attack). Uses the sprites shipped in gfx/33.
+zFace(n)=zBlowDir(n)
+zBlowEffect(n)=0
+
+	If zBlowStill(n)=1 Then
+		zBlowStillSeq(n)=zBlowStillSeq(n)+1
+		If zBlowStillSeq(n) > zBlowStillTime(n) Then zBlowStill(n)=0
+		Goto noBlowSeq33
+	EndIf
+
+zBlowSeq(n)=zBlowSeq(n)+1
+.noBlowSeq33
+zchunkType(n)=50
+
+Select zCurBlow(n)
+Case 0	;block
+	zNoMove(n)=1:zNoJump(n)=1
+	zBlock(n)=1:zani(n)=13:zf(n)=1
+	If blockKey(n)=0 And zBLocked(n)=0 Then zBlowSeq(n)=0:zBlow(n)=0
+
+Case 2	;flying kick
+	a=7: b=35
+	zNoJump(n)=0: zJumping(n)=1
+	If zBlowSeq(n) => 1 And zBlowSeq(n) =< a Then zani(n)=8:zf(n)=1
+	If zBlowSeq(n) = a And gameSound Then PlaySound blowsnd
+	If zBlowSeq(n) > a And zBlowSeq(n) =< b Then
+		zani(n)=8:zf(n)=2
+		portBlow(n,0,32,15,25,0,6,60,15,rashHitSnd)
+	EndIf
+	If zBlowSeq(n) > b Then zBlowSeq(n)=0:zBlow(n)=0:zBlowStill(n)=0
+	If zongnd(n)=1 And zBlowStill(n)=0 And zBlowSeq(n) > 2 Then zBlow(n)=0:zblowseq(n)=0
+
+Case 5	;rising uppercut
+	a=6: b=a+14: c=b+10
+	zNoMove(n)=1
+	If zBlowSeq(n) => 1 And zBlowSeq(n) < a Then zani(n)=3:zf(n)=1
+	If zBlowSeq(n) = a And gameSound Then PlaySound blowsnd
+	If zBlowSeq(n) => a And zBlowSeq(n) < b Then
+		zani(n)=7:zf(n)=1:movey(n,-3):zNoGrav(n)=1
+		portBlow(n,0,24,40,52,62,8,60,15,highpunchsnd)
+	EndIf
+	If zBlowSeq(n) => b And zBlowSeq(n) < c Then zani(n)=4:zf(n)=1
+	If zBlowSeq(n) => c Then zBlowSeq(n)=0:zBlow(n)=0
+
+Case 7,9,14	;blade dash
+	a=7: b=a+7: c=b+7: d=c+7: e=d+7: f=e+8
+	zNoMove(n)=1: zNoJump(n)=1
+	dmg=8 : If zCurBlow(n)=14 Then dmg=16
+	If zBlowSeq(n) => 1 And zBlowSeq(n) < a Then zani(n)=10:zf(n)=1
+	If zBlowSeq(n) = a And gameSound Then PlaySound slashsnd
+	If zBlowSeq(n) => a And zBlowSeq(n) < b Then zani(n)=10:zf(n)=2:movex2(n,zBlowDir(n),3)
+	If zBlowSeq(n) => b And zBlowSeq(n) < c Then
+		zani(n)=10:zf(n)=3:movex2(n,zBlowDir(n),3)
+		portBlow(n,0,32,15,30,42,dmg,60,15,slashsnd)
+	EndIf
+	If zBlowSeq(n) => c And zBlowSeq(n) < d Then
+		zani(n)=10:zf(n)=4:movex2(n,zBlowDir(n),2)
+		portBlow(n,0,26,20,40,55,dmg,60,15,slashsnd)
+	EndIf
+	If zBlowSeq(n) => d And zBlowSeq(n) < e Then zani(n)=10:zf(n)=5
+	If zBlowSeq(n) => e And zBlowSeq(n) < f Then zani(n)=1:zf(n)=0
+	If zBlowSeq(n) => f Then zBlowSeq(n)=0:zBlow(n)=0:If zCurBlow(n)=14 Then zSuperBar(n)=0
+
+Case 4,10,3,6,11,12,13	;kick (low for 4)
+	a=8: b=a+10: c=b+8
+	zNoMove(n)=1: zNoJump(n)=1
+	If zBlowSeq(n) => 1 And zBlowSeq(n) < a Then zani(n)=6:zf(n)=3
+	If zBlowSeq(n) => a And zBlowSeq(n) < b Then
+		zani(n)=6:zf(n)=4
+		If zCurBlow(n)=4 Then
+			portBlow(n,0,32,6,14,22,6,50,15,mikeKickSnd)
+		Else
+			portBlow(n,0,32,22,32,40,6,50,15,mikeKickSnd)
+		EndIf
+	EndIf
+	If zBlowSeq(n) => b And zBlowSeq(n) < c Then zani(n)=6:zf(n)=3
+	If zBlowSeq(n) => c Then zBlowSeq(n)=0:zBlow(n)=0
+
+Default	;punch (1, grab button and the rest)
+	a=8: b=a+8: c=b+8
+	zNoMove(n)=1: zNoJump(n)=1
+	If zBlowSeq(n) => 1 And zBlowSeq(n) < a Then zani(n)=6:zf(n)=1
+	If zBlowSeq(n) => a And zBlowSeq(n) < b Then
+		zani(n)=6:zf(n)=2
+		portBlow(n,0,26,32,40,0,5,40,15,mikePunchSnd)
+	EndIf
+	If zBlowSeq(n) => b And zBlowSeq(n) < c Then zani(n)=6:zf(n)=1
+	If zBlowSeq(n) => c Then zBlowSeq(n)=0:zBlow(n)=0
+End Select
 
 End Function
 
 ;----------------------------- make thug's moves! -----------------------------------
 Function DoThug(n)
+;[android port] moves written for the port (empty in the 0.96 source). Sprites from gfx/34.
+zFace(n)=zBlowDir(n)
+zBlowEffect(n)=0
 
+	If zBlowStill(n)=1 Then
+		zBlowStillSeq(n)=zBlowStillSeq(n)+1
+		If zBlowStillSeq(n) > zBlowStillTime(n) Then zBlowStill(n)=0
+		Goto noBlowSeq34
+	EndIf
+
+zBlowSeq(n)=zBlowSeq(n)+1
+.noBlowSeq34
+zchunkType(n)=50
+
+Select zCurBlow(n)
+Case 0	;block
+	zNoMove(n)=1:zNoJump(n)=1
+	zBlock(n)=1:zani(n)=13:zf(n)=1
+	If blockKey(n)=0 And zBLocked(n)=0 Then zBlowSeq(n)=0:zBlow(n)=0
+
+Case 2	;flying kick
+	a=6: b=32
+	zNoJump(n)=0: zJumping(n)=1
+	If zBlowSeq(n) => 1 And zBlowSeq(n) =< a Then zani(n)=4:zf(n)=1
+	If zBlowSeq(n) = a And gameSound Then PlaySound blowsnd
+	If zBlowSeq(n) > a And zBlowSeq(n) =< b Then
+		zani(n)=8:zf(n)=1
+		portBlow(n,0,34,14,24,0,6,60,15,kicksnd)
+	EndIf
+	If zBlowSeq(n) > b Then zBlowSeq(n)=0:zBlow(n)=0:zBlowStill(n)=0
+	If zongnd(n)=1 And zBlowStill(n)=0 And zBlowSeq(n) > 2 Then zBlow(n)=0:zblowseq(n)=0
+
+Case 4,9	;sweep
+	a=6: b=a+6: c=b+10: d=c+6
+	zNoMove(n)=1: zNoJump(n)=1
+	If zBlowSeq(n) => 1 And zBlowSeq(n) < a Then zani(n)=9:zf(n)=1
+	If zBlowSeq(n) => a And zBlowSeq(n) < b Then zani(n)=9:zf(n)=2
+	If zBlowSeq(n) => b And zBlowSeq(n) < c Then
+		zani(n)=9:zf(n)=3
+		portBlow(n,0,32,4,10,16,6,60,15,kicksnd)
+	EndIf
+	If zBlowSeq(n) => c And zBlowSeq(n) < d Then zani(n)=9:zf(n)=2
+	If zBlowSeq(n) => d Then zBlowSeq(n)=0:zBlow(n)=0
+
+Case 5,7,10,14	;high kick
+	a=8: b=a+10: c=b+6
+	zNoMove(n)=1: zNoJump(n)=1
+	dmg=6 : If zCurBlow(n)=14 Then dmg=14
+	If zBlowSeq(n) => 1 And zBlowSeq(n) < a Then zani(n)=6:zf(n)=4
+	If zBlowSeq(n) => a And zBlowSeq(n) < b Then
+		zani(n)=6:zf(n)=3
+		portBlow(n,0,30,24,34,42,dmg,50,15,mikeKickSnd)
+	EndIf
+	If zBlowSeq(n) => b And zBlowSeq(n) < c Then zani(n)=6:zf(n)=4
+	If zBlowSeq(n) => c Then zBlowSeq(n)=0:zBlow(n)=0:If zCurBlow(n)=14 Then zSuperBar(n)=0
+
+Default	;punch
+	a=8: b=a+8: c=b+6
+	zNoMove(n)=1: zNoJump(n)=1
+	If zBlowSeq(n) => 1 And zBlowSeq(n) < a Then zani(n)=6:zf(n)=2
+	If zBlowSeq(n) => a And zBlowSeq(n) < b Then
+		zani(n)=6:zf(n)=1
+		portBlow(n,0,23,32,40,0,5,40,15,mikePunchSnd)
+	EndIf
+	If zBlowSeq(n) => b And zBlowSeq(n) < c Then zani(n)=6:zf(n)=2
+	If zBlowSeq(n) => c Then zBlowSeq(n)=0:zBlow(n)=0
+End Select
 
 End Function
 
@@ -773,7 +958,106 @@ End Select
 End Function
 ;----------------------------------- Venom ----------------------------------------
 Function DoVenom(n)
+;[android port] Venom (adventure stage 50) had no moves in the 0.96 source: after the first attack
+;command it stayed frozen in the attack state and could never hurt the player. Moves written for
+;the port with the sprites in gfx/44: tongue lunge (long range), claw uppercut, web whip, air claw.
+zFace(n)=zBlowDir(n)
+zBlowEffect(n)=0
 
+	If zBlowStill(n)=1 Then
+		zBlowStillSeq(n)=zBlowStillSeq(n)+1
+		If zBlowStillSeq(n) > zBlowStillTime(n) Then zBlowStill(n)=0
+		Goto noBlowSeq44
+	EndIf
+
+zBlowSeq(n)=zBlowSeq(n)+1
+.noBlowSeq44
+zchunkType(n)=20
+
+Select zCurBlow(n)
+Case 0	;block
+	zNoMove(n)=1:zNoJump(n)=1
+	zBlock(n)=1:zani(n)=13:zf(n)=1
+	If blockKey(n)=0 And zBLocked(n)=0 Then zBlowSeq(n)=0:zBlow(n)=0
+
+Case 2	;air claw
+	a=6: b=34
+	zNoJump(n)=0: zJumping(n)=1
+	If zBlowSeq(n) => 1 And zBlowSeq(n) =< a Then zani(n)=4:zf(n)=1
+	If zBlowSeq(n) = a And gameSound Then PlaySound slashsnd
+	If zBlowSeq(n) > a And zBlowSeq(n) =< b Then
+		zani(n)=5:zf(n)=1
+		portBlow(n,0,38,15,30,45,8,60,15,slashsnd)
+	EndIf
+	If zBlowSeq(n) > b Then zBlowSeq(n)=0:zBlow(n)=0:zBlowStill(n)=0
+	If zongnd(n)=1 And zBlowStill(n)=0 And zBlowSeq(n) > 2 Then zBlow(n)=0:zblowseq(n)=0
+
+Case 5,10,11	;claw uppercut
+	a=6: b=a+6: c=b+10: d=c+6: e=d+8
+	zNoMove(n)=1: zNoJump(n)=1
+	If zBlowSeq(n) => 1 And zBlowSeq(n) < a Then zani(n)=14:zf(n)=1
+	If zBlowSeq(n) => a And zBlowSeq(n) < b Then zani(n)=14:zf(n)=2
+	If zBlowSeq(n) = b And gameSound Then PlaySound slashsnd
+	If zBlowSeq(n) => b And zBlowSeq(n) < c Then
+		zani(n)=14:zf(n)=3
+		portBlow(n,0,44,30,45,60,9,60,15,slashsnd)
+	EndIf
+	If zBlowSeq(n) => c And zBlowSeq(n) < d Then zani(n)=14:zf(n)=4
+	If zBlowSeq(n) => d And zBlowSeq(n) < e Then zani(n)=14:zf(n)=5
+	If zBlowSeq(n) => e Then zBlowSeq(n)=0:zBlow(n)=0
+
+Case 15	;web whip
+	a=8: b=a+8: c=b+8: d=c+8: e=d+8
+	zNoMove(n)=1: zNoJump(n)=1
+	If zBlowSeq(n) => 1 And zBlowSeq(n) < a Then zani(n)=15:zf(n)=1
+	If zBlowSeq(n) = a And gameSound Then PlaySound blowsnd
+	If zBlowSeq(n) => a And zBlowSeq(n) < b Then
+		zani(n)=15:zf(n)=2
+		portBlow(n,0,48,30,42,55,7,50,15,ddHitSnd)
+	EndIf
+	If zBlowSeq(n) => b And zBlowSeq(n) < c Then zani(n)=15:zf(n)=3
+	If zBlowSeq(n) => c And zBlowSeq(n) < d Then
+		zani(n)=15:zf(n)=4
+		portBlow(n,0,62,4,12,20,7,50,15,ddHitSnd)
+	EndIf
+	If zBlowSeq(n) => d And zBlowSeq(n) < e Then zani(n)=15:zf(n)=5
+	If zBlowSeq(n) => e Then zBlowSeq(n)=0:zBlow(n)=0
+
+Default	;tongue lunge (1, 4, 7, 9 and the super move 14)
+	a=10: b=a+6: c=b+6: d=c+10: e=d+8: f=e+10
+	zNoMove(n)=1: zNoJump(n)=1
+	dmg=8
+	If zCurBlow(n)=7 Or zCurBlow(n)=9 Then dmg=10
+	If zCurBlow(n)=14 Then dmg=20
+	If zBlowSeq(n) => 1 And zBlowSeq(n) < a Then zani(n)=6:zf(n)=1
+	If zBlowSeq(n) => a And zBlowSeq(n) < b Then zani(n)=6:zf(n)=2
+	If zBlowSeq(n) = b And gameSound Then PlaySound slashsnd
+	If zBlowSeq(n) => b And zBlowSeq(n) < c Then
+		zani(n)=6:zf(n)=3
+		portBlow(n,10,80,18,28,38,dmg,70,15,smashSnd)
+	EndIf
+	If zBlowSeq(n) => c And zBlowSeq(n) < d Then
+		zani(n)=6:zf(n)=4
+		portBlow(n,10,100,14,22,30,dmg,70,15,smashSnd)
+	EndIf
+	If zBlowSeq(n) => d And zBlowSeq(n) < e Then zani(n)=6:zf(n)=5
+	If zBlowSeq(n) => e And zBlowSeq(n) < f Then zani(n)=6:zf(n)=7
+	If zBlowSeq(n) => f Then zBlowSeq(n)=0:zBlow(n)=0:If zCurBlow(n)=14 Then zSuperBar(n)=0
+End Select
+
+End Function
+
+;[android port] sets up to three 1-pixel hit lines in front of the character for this frame:
+;x = start offset from the centre, w = reach, y1..y3 = height above the feet (0 = unused)
+Function portBlow(n,x,w,y1,y2,y3,damage,impact,still,snd)
+	zblowPamount(n)=0
+	If y1 > 0 Then zblowPamount(n)=zblowPamount(n)+1:k=zblowPamount(n):xblow(n,k)=x:yblow(n,k)=y1:wblow(n,k)=w:hblow(n,k)=1
+	If y2 > 0 Then zblowPamount(n)=zblowPamount(n)+1:k=zblowPamount(n):xblow(n,k)=x:yblow(n,k)=y2:wblow(n,k)=w:hblow(n,k)=1
+	If y3 > 0 Then zblowPamount(n)=zblowPamount(n)+1:k=zblowPamount(n):xblow(n,k)=x:yblow(n,k)=y3:wblow(n,k)=w:hblow(n,k)=1
+	zHitMode(n)=0:zBlowHold(n)=8
+	zBlowDamage(n)=damage:zBLowEffect(n)=1:zBlowImpact(n)=impact
+	zBlowStillTime(n)=still:zBlowBlockTime(n)=still+5
+	zBlowSound(n)=snd
 End Function
 
 

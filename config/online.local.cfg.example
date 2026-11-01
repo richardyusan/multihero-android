@@ -1,0 +1,9 @@
+# Copy to config/online.local.cfg and fill in the values from dev.epicgames.com/portal
+# (Product Settings -> SDK Download & Credentials). online.local.cfg is in .gitignore so the
+# client secret never ends up on GitHub. It is packed into the APK and overrides online.cfg.
+backend = eos
+eos_product_id =
+eos_sandbox_id =
+eos_deployment_id =
+eos_client_id =
+eos_client_secret =

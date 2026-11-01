@@ -6,7 +6,7 @@
 
 <p align="center">
   An Android port of <b>MultiHero 0.96</b> by <b>mhman</b>, a 2D multiplayer platform fighting game written in Blitz3D,
-  running its <b>original, unmodified Blitz BASIC source</b> through a custom Blitz → C++ transpiler
+  running its <b>original Blitz BASIC source</b> through a custom Blitz → C++ transpiler
   and a lightweight native 2D runtime. No game engine required.
 </p>
 
@@ -18,16 +18,21 @@
 
 <p align="center">
   <img src="docs/screenshots/gameplay.png" width="49%" alt="Adventure mode">
-  <img src="docs/screenshots/versus.png" width="49%" alt="VS mode">
   <img src="docs/screenshots/menu.png" width="49%" alt="Main menu">
-  <img src="docs/screenshots/select.png" width="49%" alt="Character select">
+  <img src="docs/screenshots/lobby.png" width="49%" alt="Multiplayer online lobby">
+  <img src="docs/screenshots/room.png" width="49%" alt="Online room with ready status">
 </p>
 
 ## Features
 
 - Runs the original `mh.bb` game code: Adventure mode, VS mode, Capture the Flag, CPU opponents, items, unlocks and saves
 - **Tiny footprint**: ~2 MB native library per ABI, no engine, no Gradle
-- **Touch controls** in the side bars of wide screens: D-pad + ATTACK / JUMP / SPECIAL / BLOCK / THROW + ESC / OK
+- **Touch controls** in the side bars of wide screens: large D-pad + ATTACK / JUMP / SPECIAL / BLOCK / THROW / JUTSU buttons with icons, ESC / OK
+- **JUTSU** button: one tap does the super move combo (hold BLOCK + press SPECIAL)
+- **UNLOCK ALL** button on the main menu – runs the game's own cheat (Backspace ×5, Enter): all characters, VS stages,
+  and (added by the port) all 50 Adventure maps and the CTF maps
+- **MULTIPLAYER ONLINE**: real-time online VS matches for up to 4 players; lobby with room list, ping, player count,
+  character and stage choice, READY, START – through **Epic Online Services** (free P2P, no own server), your own lobby server (e.g. Oracle Cloud free VPS) or an offline demo ([docs/ONLINE.md](docs/ONLINE.md))
 - **Gamepad** (Bluetooth/USB) and **hardware keyboard** support; touch controls hide while a pad is used
 - Crisp "sharp bilinear" scaling with OpenGL ES 2, low-latency audio via AAudio
 - Original game speed (54 fps game timer), display capped at 60 fps
@@ -50,19 +55,28 @@ src/*.bb ──(tools/bb2cpp.py)──▶ mh.cpp ─┐
 3. **`runtime/android_main.cpp`** is the platform layer: NativeActivity, EGL/GLES2, AAudio, touch,
    keys and gamepads.
 
-More detail in [docs/HOW_IT_WORKS.md](docs/HOW_IT_WORKS.md).
+4. **`runtime/net/`** is the online layer behind the lobby (`src/online.bb`); new Blitz-callable functions are
+   declared in Blitz3D-style `.decls` files in `runtime/decls/`.
+
+More detail in [docs/HOW_IT_WORKS.md](docs/HOW_IT_WORKS.md). Toolchain versions, signing and troubleshooting are in [BUILD.md](BUILD.md).
 
 ## Repository layout
 
 | Path | Contents |
 |---|---|
-| `src/` | Original MultiHero 0.96 Blitz source (unchanged) |
+| `src/` | Original MultiHero 0.96 Blitz source; port additions are `online.bb`, the moves of four enemies left empty in 0.96 and a few lines marked `;[android port]` |
 | `tools/` | `bb2cpp.py` transpiler, asset preparation, icon and font generators |
-| `runtime/` | Portable Blitz 2D runtime + Android and Linux backends |
+| `runtime/` | Portable Blitz 2D runtime + Android, web (WebAssembly) and Linux backends |
+| `web/` | Browser page (`shell.html`) and a Windows launcher for the web build |
+| `runtime/net/` | Online backends: offline demo, VPS relay client, Epic Online Services (Lobby + P2P) |
+| `runtime/decls/` | `.decls` files declaring native functions callable from Blitz (`Net*`, `PortScreen`) |
+| `server/` | Lobby/relay server for a VPS (Python, no dependencies), systemd unit, test player |
+| `config/` | `online.cfg` – which online backend / server the game uses (bundled into the APK); private `online.local.cfg` for EOS credentials (not in git, see `.example`) |
 | `android/` | `AndroidManifest.xml`, the small Java activity (immersive full screen), launcher icons |
 | `game/` | Put the original game data here (not included, see [game/README.md](game/README.md)) |
 | `scripts/` | `test_linux.sh` – headless build and smoke test |
 | `build_android.sh` | Builds the APK without Gradle |
+| `build_web.sh` | Builds the browser version (WebAssembly) – see [docs/WEB.md](docs/WEB.md) |
 
 ## Building
 
@@ -95,6 +109,16 @@ For a release key use `KEYSTORE=/path/release.jks KS_PASS=... KS_ALIAS=... ./bui
 adb install -r build/MultiHero.apk
 ```
 
+### Play in a web browser
+
+```bash
+./build_web.sh /path/to/MultiHero096   # needs the Emscripten SDK -> build/web/
+cd build/web && python3 -m http.server 8080   # open http://localhost:8080
+```
+
+Keyboard, mouse, gamepad and touch all work; settings are saved in the browser. Details in [docs/WEB.md](docs/WEB.md).
+In the browser the online lobby runs in demo mode (browsers cannot open the relay's TCP connection).
+
 ### Test on a PC without a phone
 
 ```bash
@@ -113,12 +137,29 @@ See [docs/HOW_IT_WORKS.md](docs/HOW_IT_WORKS.md#testing-without-a-phone) for the
 | SPECIAL | X | H | Special move |
 | BLOCK | Y, L2/R2 | Space | Block |
 | THROW | L1 / R1 | J | Throw / pick up |
+| JUTSU | – | hold Space + H | Super move: BLOCK held + SPECIAL (one tap on the touch button) |
 | ESC / Android Back | Select | Esc | In-game menu / back |
 | OK | Start | Enter | Confirm |
+| UNLOCK ALL (main menu) | – | Backspace ×5, Enter | Unlock all characters, Adventure, VS and CTF maps |
 | Tap the game picture | – | – | Mouse click (menus, character and stage select) |
 
 The touch buttons always follow player 1's keys from `keys.cfg`, so they keep working after you
 change keys in **Options → Controls**.
+
+## Multiplayer online
+
+Main menu → **MULTIPLAYER ONLINE**. The backend is chosen in `config/online.cfg`:
+
+- **demo** (default, no server set): offline simulation with sample rooms and bots, for trying the lobby
+- **relay**: your own server – run `server/lobby_server.py` on a VPS (step-by-step for an Oracle Cloud
+  free VM in [docs/ONLINE.md](docs/ONLINE.md)), then set `backend = relay` and `server = <ip>`
+- **eos**: Epic Online Services – lobbies and peer-to-peer through Epic, free, no own server, no Epic account
+  needed (anonymous device login). Needs the EOS SDK at build time (`tools/setup_eos.py`) and your credentials
+  in `config/online.local.cfg`; works on arm64 and x86_64 phones (Epic has no 32-bit ARM library)
+
+In the room each player picks a character and the host picks the stage; after START the match is played
+**online in real time** – every phone runs the same fight and only the buttons travel over the network
+(deterministic lockstep, see [docs/ONLINE.md](docs/ONLINE.md#real-time-online-matches-netplay)).
 
 ## Modding
 
@@ -130,6 +171,10 @@ syntax it does not understand.
 ## Limitations
 
 - The level editor (`Editor.bb`) is not ported.
+- Online matches: VS death match only (up to 4 players), no rejoin after leaving; the app must stay in the foreground.
+- UNLOCK ALL is not saved by itself: it lasts until the game is closed. The opened maps are written to the save
+  file the next time the game saves your progress (after finishing a stage), and characters that Adventure
+  progress unlocks then stay open too.
 - Supports the Blitz BASIC subset used by MultiHero (no `Type`/`New`/`Each`, `Gosub`, `Data/Read`, 3D commands).
 
 ## Credits
@@ -141,7 +186,7 @@ syntax it does not understand.
 
 ## License
 
-The porting code (`tools/`, `runtime/`, `android/`, `scripts/`, build files, docs) is released under the
+The porting code (`tools/`, `runtime/`, `android/`, `scripts/`, `server/`, `config/`, `src/online.bb`, build files, docs) is released under the
 [MIT License](LICENSE). The original game source in `src/` belongs to its author, **mhman**, and the
 characters used by the game belong to their respective owners. See [NOTICE.md](NOTICE.md).
 MultiHero is a non-commercial fan project and is not affiliated with any of those companies.

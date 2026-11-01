@@ -9,6 +9,31 @@ import android.view.WindowManager;
 
 /** NativeActivity with immersive full screen; the game itself runs in libmultihero.so. */
 public class MHActivity extends NativeActivity {
+    /**
+     * Epic Online Services: libEOSSDK.so must be loaded from Java (its JNI_OnLoad keeps the
+     * JavaVM) and EOSSDK.init(activity) must run before the game calls EOS_Initialize.
+     * Builds without the SDK, and ABIs without libEOSSDK.so (armeabi-v7a), simply skip this.
+     */
+    private static boolean eosLoaded;
+    static {
+        try {
+            System.loadLibrary("EOSSDK");
+            eosLoaded = true;
+        } catch (Throwable t) {
+            eosLoaded = false;
+        }
+    }
+
+    private void initEos() {
+        if (!eosLoaded) return;
+        try {
+            Class.forName("com.epicgames.mobile.eossdk.EOSSDK")
+                    .getMethod("init", android.app.Activity.class).invoke(null, this);
+        } catch (Throwable t) {
+            android.util.Log.w("MultiHero", "EOS init failed", t);
+        }
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
@@ -19,6 +44,7 @@ public class MHActivity extends NativeActivity {
             getWindow().setAttributes(lp);
         }
         super.onCreate(savedInstanceState);
+        initEos();
         hideSystemUi();
     }
 

@@ -226,16 +226,16 @@ Case 10: ;Richter Belmont
 	zJumpSnd(n)=shotwallsnd
 
 
-Case 30: ;Pig
-	zBlowDist(n,1)=64
-	zBlowDist(n,2)=60
-	zBlowDist(n,4)=60
-	zBlowDist(n,5)=60
-	zBlowDist(n,7)=60
-	zBlowDist(n,9)=60	:dangerMove9(n)=1
-	zBlowDist(n,10)=80
-	zBlowDist(n,11)=60
-	zBlowDist(n,14)=60
+Case 30: ;Pig  [android port] reach matches the bite written in DoPig (was 60-80: it bit thin air)
+	zBlowDist(n,1)=28
+	zBlowDist(n,2)=28
+	zBlowDist(n,4)=28
+	zBlowDist(n,5)=28
+	zBlowDist(n,7)=28
+	zBlowDist(n,9)=28	:dangerMove9(n)=1
+	zBlowDist(n,10)=28
+	zBlowDist(n,11)=28
+	zBlowDist(n,14)=28
 	zDuckHeight(n)=45
 	zJumpLimit(n)=10
 	zDontJump(n)=1
@@ -279,11 +279,11 @@ Case 33: ;Shredder
 	zBlowDist(n,2)=50
 	zBlowDist(n,4)=50
 	zBlowDist(n,5)=50
-	zBlowDist(n,7)=110
-	zBlowDist(n,9)=110	:dangerMove9(n)=0
+	zBlowDist(n,7)=85	;[android port] blade dash reach (was 110)
+	zBlowDist(n,9)=85	:dangerMove9(n)=0
 	zBlowDist(n,10)=50
 	zBlowDist(n,11)=50
-	zBlowDist(n,14)=50
+	zBlowDist(n,14)=85
 	zDontPickItem(n)=1
 
 Case 34: ;Thug
@@ -461,16 +461,16 @@ Case 43;Laser helper
 	zhelper(n)=1
 	zUseSpecialAI(n)=1
 
-Case 44	;Venom
-	zBlowDist(n,1)=120
-	zBlowDist(n,2)=120
-	zBlowDist(n,4)=120
-	zBlowDist(n,5)=60   : dangerMove5(n)=0
-	zBlowDist(n,7)=120
-	zBlowDist(n,9)=120	:dangerMove9(n)=0
-	zBlowDist(n,10)=60
-	zBlowDist(n,11)=50
-	zBlowDist(n,14)=50
+Case 44	;Venom  [android port] reach matches the moves written in DoVenom
+	zBlowDist(n,1)=110
+	zBlowDist(n,2)=40
+	zBlowDist(n,4)=110
+	zBlowDist(n,5)=48   : dangerMove5(n)=0
+	zBlowDist(n,7)=110
+	zBlowDist(n,9)=110	:dangerMove9(n)=0
+	zBlowDist(n,10)=48
+	zBlowDist(n,11)=48
+	zBlowDist(n,14)=110
 	zGrabDist(n)=zGrabDist(n)+15
 	zDontPickItem(n)=1
 	zStone(n)=1
