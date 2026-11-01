@@ -1,0 +1,31 @@
+name: build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Transpile + build Linux test binary
+        run: bash scripts/test_linux.sh
+
+      - name: Lobby server smoke test
+        run: |
+          python3 server/lobby_server.py --port 7777 &
+          sleep 1
+          timeout 10 python3 server/test_bot.py --port 7777 --create --seconds 3 | tee bot.log
+          grep -q JOINED bot.log
+
+      - name: Build Android native libraries (NDK)
+        run: |
+          NDK="${ANDROID_NDK_LATEST_HOME:-$ANDROID_NDK_HOME}" SDK="$ANDROID_HOME" LIBS_ONLY=1 bash build_android.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-libs
+          path: build/android/lib/
