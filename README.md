@@ -27,13 +27,17 @@
 
 - Runs the original `mh.bb` game code: Adventure mode, VS mode, Capture the Flag, CPU opponents, items, unlocks and saves
 - **Tiny footprint**: ~2 MB native library per ABI, no engine, no Gradle
-- **Touch controls** in the side bars of wide screens: large D-pad + ATTACK / JUMP / SPECIAL / BLOCK / THROW / JUTSU buttons with icons, ESC / OK
-- **JUTSU** button: one tap does the super move combo (hold BLOCK + press SPECIAL)
+- **Touch controls** in the side bars of wide screens: large D-pad + ATTACK / JUMP / SPECIAL / BLOCK / THROW / JUTSU / UP+SP / DN+SP buttons with icons, ESC / OK
+- **Combo buttons**: **JUTSU** = super move (hold BLOCK + SPECIAL), **UP+SP** = up special (hold UP + SPECIAL,
+  e.g. the extra air jump), **DN+SP** = down special (hold DOWN + SPECIAL)
+- **Adventure cheats** on the main menu: **INFINITE HEALTH** and **INFINITE JUTSU** (super bar always full),
+  each switched on/off separately, only active in Adventure mode
 - **UNLOCK ALL** button on the main menu – runs the game's own cheat (Backspace ×5, Enter): all characters, VS stages,
   and (added by the port) all 50 Adventure maps and the CTF maps
 - **MULTIPLAYER ONLINE**: real-time online VS matches for up to 4 players; lobby with room list, ping, player count,
   character and stage choice, READY, START – through **Epic Online Services** (free P2P, no own server), your own lobby server (e.g. Oracle Cloud free VPS) or an offline demo ([docs/ONLINE.md](docs/ONLINE.md))
-- **Gamepad** (Bluetooth/USB) and **hardware keyboard** support; touch controls hide while a pad is used
+- **Several gamepads** (Bluetooth/USB): the first pad used is player 1, the second player 2, up to 4 – local VS and
+  Adventure with friends; players 2-4 move their menu pointer with their pad. Hardware keyboards work too
 - Crisp "sharp bilinear" scaling with OpenGL ES 2, low-latency audio via AAudio
 - Original game speed (54 fps game timer), display capped at 60 fps
 - Headless Linux build with scripted input and screenshots for testing without a phone
@@ -143,8 +147,9 @@ See [docs/HOW_IT_WORKS.md](docs/HOW_IT_WORKS.md#testing-without-a-phone) for the
 | UNLOCK ALL (main menu) | – | Backspace ×5, Enter | Unlock all characters, Adventure, VS and CTF maps |
 | Tap the game picture | – | – | Mouse click (menus, character and stage select) |
 
-The touch buttons always follow player 1's keys from `keys.cfg`, so they keep working after you
-change keys in **Options → Controls**.
+The touch buttons and game pads give their buttons to the game directly (not as keyboard keys), so they
+keep working whatever is set in **Options → Controls** – even after a wrong remap. Pressing ESC while
+the controls screen waits for a key now keeps the old key instead of leaving it empty.
 
 ## Multiplayer online
 

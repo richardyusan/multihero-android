@@ -480,6 +480,7 @@ Include "mh2.bb"
 Include "moves1.bb"
 Include "moves2.bb"	
 Include "online.bb"	;[android port] multiplayer online lobby
+Include "port.bb"	;[android port] touch / multi-pad input, adventure cheats
 
 loadData()  ;Loads general maps data
 
@@ -2294,6 +2295,7 @@ End Function
 ;--------KEY INPUTS-----------------------------------------------------------------------------------
 Function Getinput()
 
+portFrame()	;[android port]
 For n= 1 To zzamount
 	zoldx(n)=zx(n):zoldy(n)=zy(n)
 Next
@@ -2382,6 +2384,7 @@ Case 1
 	If blockKey(n)=1 And specialKey(n)=1 Then superKey(n)=1
 	
 End Select
+portActions(n)	;[android port] touch controls / this player's game pad
 EndIf
 Next
 

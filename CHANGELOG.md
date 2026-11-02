@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.6.0 – 2026-11-03
+- New touch buttons, same size as THROW / JUTSU: **UP+SP** above THROW (hold UP + SPECIAL, the game's "up special")
+  and **DN+SP** above JUTSU (hold DOWN + SPECIAL, "down special").
+- Main menu: **INFINITE HEALTH** and **INFINITE JUTSU** switches (each on/off, remembered) for Adventure mode only.
+- Fixed: after remapping the keys in Options > Controls the touch buttons could stop working and the fighter did not
+  react. Touch buttons and pads now act on the player directly, independent of keys.cfg; ESC during key setup keeps
+  the old key.
+- Fixed: with several Bluetooth/USB controllers all of them controlled player 1. Each pad now has its own player
+  (first pad used = player 1, second = player 2 ... up to 4), in the game and in the menus (players 2-4 move their
+  pointer with their pad).
+- versionCode 7, versionName 0.96-android1.6.
+
 ## 1.5.0 – 2026-11-01
 - **Ping indicator in online matches**: signal bars and ms at the bottom centre of the screen (for the host the
   slowest player, for the others their ping to the host).

@@ -53,6 +53,7 @@ static void run_script() {
     if (e.cmd == "key") rt_key(atoi(e.a[0].c_str()), atoi(e.a[1].c_str()) != 0);
     else if (e.cmd == "tap") { rt_touch(99, atof(e.a[0].c_str()), atof(e.a[1].c_str()), 0); rt_touch(99, atof(e.a[0].c_str()), atof(e.a[1].c_str()), 2); }
     else if (e.cmd == "touch") rt_touch(atoi(e.a[0].c_str()), atof(e.a[1].c_str()), atof(e.a[2].c_str()), atoi(e.a[3].c_str()));
+    else if (e.cmd == "pad") rt_pad(atoi(e.a[0].c_str()), atoi(e.a[1].c_str()), atoi(e.a[2].c_str()) != 0);
     else if (e.cmd == "click") { float x = atof(e.a[0].c_str()), y = atof(e.a[1].c_str());
                                  rt_mouse(x, y, 1, true); rt_mouse(x, y, 1, false); }
     else if (e.cmd == "shot") { char n[64]; snprintf(n, sizeof n, "f%05d.ppm", g_frame); save_shot(n); }

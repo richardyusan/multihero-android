@@ -62,6 +62,11 @@ EM_JS(void, js_log, (const char *m), { console.log('[mh] ' + UTF8ToString(m)); }
 extern "C" {
 EMSCRIPTEN_KEEPALIVE void web_key(int sc, int down) { if (down) g_overlay = false; rt_key(sc, down != 0); }
 EMSCRIPTEN_KEEPALIVE void web_vbutton(int vb, int down) { g_overlay = false; rt_vbutton(vb, down != 0); }
+// pad = navigator.getGamepads() index: each pad is its own player
+EMSCRIPTEN_KEEPALIVE void web_pad(int pad, int vb, int down) {
+  int player = rt_pad(pad, vb, down != 0);
+  if (player == 1 && down) g_overlay = false;
+}
 EMSCRIPTEN_KEEPALIVE void web_touch(int id, float nx, float ny, int action) { g_overlay = true; rt_touch(id, nx, ny, action); }
 EMSCRIPTEN_KEEPALIVE void web_touch_cancel() { rt_touch_cancel_all(); }
 EMSCRIPTEN_KEEPALIVE void web_mouse(float nx, float ny, int button, int down) { rt_mouse(nx, ny, button, down != 0); }

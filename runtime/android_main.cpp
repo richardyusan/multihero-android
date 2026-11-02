@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <atomic>
 #include <cmath>
+#include <map>
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
@@ -214,14 +215,19 @@ static int pad_button_vb(int kc) {
   return -1;
 }
 
-static float g_axis_x = 0, g_axis_y = 0, g_hat_x = 0, g_hat_y = 0;
-static void update_pad_dirs() {
-  float x = fabsf(g_hat_x) > 0.5f ? g_hat_x : g_axis_x;
-  float y = fabsf(g_hat_y) > 0.5f ? g_hat_y : g_axis_y;
-  rt_vbutton(VB_LEFT, x < -0.5f);
-  rt_vbutton(VB_RIGHT, x > 0.5f);
-  rt_vbutton(VB_UP, y < -0.5f);
-  rt_vbutton(VB_DOWN, y > 0.5f);
+// every pad (Bluetooth / USB) is its own player: the first one used is player 1, the next player 2...
+struct PadAxes { float ax = 0, ay = 0, hx = 0, hy = 0; };
+static std::map<int, PadAxes> g_pad_axes;
+static void pad_used(int player) { if (player == 1) g_overlay = false; }   // touch controls stay for the others
+static void update_pad_dirs(int dev) {
+  PadAxes &p = g_pad_axes[dev];
+  float x = fabsf(p.hx) > 0.5f ? p.hx : p.ax;
+  float y = fabsf(p.hy) > 0.5f ? p.hy : p.ay;
+  rt_pad(dev, VB_LEFT, x < -0.5f);
+  rt_pad(dev, VB_RIGHT, x > 0.5f);
+  rt_pad(dev, VB_UP, y < -0.5f);
+  int pl = rt_pad(dev, VB_DOWN, y > 0.5f);
+  if (fabsf(x) > 0.5f || fabsf(y) > 0.5f) pad_used(pl);
 }
 
 static int32_t on_input(android_app *, AInputEvent *ev) {
@@ -229,12 +235,13 @@ static int32_t on_input(android_app *, AInputEvent *ev) {
   int src = AInputEvent_getSource(ev);
   if (type == AINPUT_EVENT_TYPE_MOTION) {
     if ((src & AINPUT_SOURCE_JOYSTICK) == AINPUT_SOURCE_JOYSTICK || (src & AINPUT_SOURCE_GAMEPAD) == AINPUT_SOURCE_GAMEPAD) {
-      g_axis_x = AMotionEvent_getAxisValue(ev, AMOTION_EVENT_AXIS_X, 0);
-      g_axis_y = AMotionEvent_getAxisValue(ev, AMOTION_EVENT_AXIS_Y, 0);
-      g_hat_x = AMotionEvent_getAxisValue(ev, AMOTION_EVENT_AXIS_HAT_X, 0);
-      g_hat_y = AMotionEvent_getAxisValue(ev, AMOTION_EVENT_AXIS_HAT_Y, 0);
-      update_pad_dirs();
-      g_overlay = false;
+      int dev = AInputEvent_getDeviceId(ev);
+      PadAxes &p = g_pad_axes[dev];
+      p.ax = AMotionEvent_getAxisValue(ev, AMOTION_EVENT_AXIS_X, 0);
+      p.ay = AMotionEvent_getAxisValue(ev, AMOTION_EVENT_AXIS_Y, 0);
+      p.hx = AMotionEvent_getAxisValue(ev, AMOTION_EVENT_AXIS_HAT_X, 0);
+      p.hy = AMotionEvent_getAxisValue(ev, AMOTION_EVENT_AXIS_HAT_Y, 0);
+      update_pad_dirs(dev);
       return 1;
     }
     int action = AMotionEvent_getAction(ev);
@@ -272,11 +279,11 @@ static int32_t on_input(android_app *, AInputEvent *ev) {
     if (kc == AKEYCODE_BUTTON_START) { rt_key(28, down); return 1; }
     bool from_pad = (src & AINPUT_SOURCE_GAMEPAD) == AINPUT_SOURCE_GAMEPAD || (src & AINPUT_SOURCE_JOYSTICK) == AINPUT_SOURCE_JOYSTICK;
     int vb = pad_button_vb(kc);
-    if (vb >= 0) { rt_vbutton(vb, down); g_overlay = false; return 1; }
+    int dev = AInputEvent_getDeviceId(ev);
+    if (vb >= 0) { pad_used(rt_pad(dev, vb, down)); return 1; }
     if (from_pad && (kc == AKEYCODE_DPAD_UP || kc == AKEYCODE_DPAD_DOWN || kc == AKEYCODE_DPAD_LEFT || kc == AKEYCODE_DPAD_RIGHT)) {
       int d = kc == AKEYCODE_DPAD_UP ? VB_UP : kc == AKEYCODE_DPAD_DOWN ? VB_DOWN : kc == AKEYCODE_DPAD_LEFT ? VB_LEFT : VB_RIGHT;
-      rt_vbutton(d, down);
-      g_overlay = false;
+      pad_used(rt_pad(dev, d, down));
       return 1;
     }
     int sc = key_to_scancode(kc);

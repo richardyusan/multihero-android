@@ -56,7 +56,7 @@ em++ $OPT "$GEN/mh.o" "$GEN/bbrt.o" "$GEN/mh_glue.o" "$GEN/web_main.o" "$GEN"/ne
   $ASYNC_FLAGS -sSTACK_SIZE=2097152 \
   -sALLOW_MEMORY_GROWTH -sINITIAL_MEMORY=134217728 \
   -sFORCE_FILESYSTEM -lidbfs.js -sENVIRONMENT=web \
-  -sEXPORTED_FUNCTIONS=_main,_web_key,_web_vbutton,_web_touch,_web_touch_cancel,_web_mouse,_web_set_overlay \
+  -sEXPORTED_FUNCTIONS=_main,_web_key,_web_vbutton,_web_pad,_web_touch,_web_touch_cancel,_web_mouse,_web_set_overlay \
   -sEXPORTED_RUNTIME_METHODS=callMain,FS,IDBFS,addRunDependency,removeRunDependency \
   -sINVOKE_RUN=0 -sEXIT_RUNTIME=0
 # give the generated files a nicer name than index.*

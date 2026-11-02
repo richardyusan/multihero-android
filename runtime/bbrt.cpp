@@ -1042,7 +1042,9 @@ int bb_waitkey() {
     plat_sleep(10);
   }
 }
+static void pact_flush();
 void bb_flushkeys() {
+  pact_flush();
   std::lock_guard<std::mutex> lk(g_in_mx);
   memset(g_keyhits, 0, sizeof g_keyhits);
   g_key_queue.clear();
@@ -1125,7 +1127,25 @@ static const char *ICON_JUTSU[16] = {
     ".#...####...##..", "###...##...####.", "#####....#######", "..##......##..##",
     ".....##..##.....", "......####......", "......####......", ".......##......."};
 
-enum { VBK_ACTION, VBK_KEY, VBK_UNLOCK, VBK_JUTSU };
+// UP + SPECIAL ("up special", gfx zuspecial*) and DOWN + SPECIAL ("down special", zDspecial*)
+static const char *ICON_UPSP[16] = {
+    ".......##.......", "......####......", ".....######.....", "....########....",
+    "...###.##.###...", ".......##.......", ".......##.......", "................",
+    "........####....", ".......####.....", "......#######...", "........###.....",
+    ".......###......", "......##........", ".....#..........", "................"};
+static const char *ICON_DNSP[16] = {
+    "........####....", ".......####.....", "......#######...", "........###.....",
+    ".......###......", "......##........", ".....#..........", "................",
+    ".......##.......", ".......##.......", "...###.##.###...", "....########....",
+    ".....######.....", "......####......", ".......##.......", "................"};
+static const char *ICON_HEART[16] = {
+    "................", "..####....####..", ".######..######.", "################",
+    "################", "################", ".##############.", "..############..",
+    "...##########...", "....########....", ".....######.....", "......####......",
+    ".......##.......", "................", "................", "................"};
+
+// VBK_COMBO: hold "vb" (BLOCK for JUTSU, UP, DOWN) and press SPECIAL on the next frame
+enum { VBK_ACTION, VBK_KEY, VBK_UNLOCK, VBK_COMBO, VBK_CHEAT };
 struct VButton {
   int kind;          // VBK_*
   int vb;            // VB_* for actions
@@ -1147,6 +1167,7 @@ static int g_dpad_touch = -999;
 static float g_dpad_cx, g_dpad_cy, g_dpad_r;
 static int g_dpad_dir[4];                  // up, down, left, right
 static int g_unlock_btn = -1;
+static int g_cheat_btn[2] = {-1, -1};
 
 // --- which menu screen the game shows (PortScreen), the unlock macro and toast messages
 static int g_frame_no = 0;
@@ -1230,15 +1251,20 @@ static void layout_screen() {
   act(VB_BLOCK, cx, cy - d, br, "BLOCK", ICON_SHIELD, 0xe0a828);
   act(VB_GRAB, cx + d + 6, cy - d - 34, sr, "THROW", ICON_THROW, 0x9c50d0);
   // JUTSU = hold BLOCK + press SPECIAL (the game's super move, superKey in mh.bb)
-  act(VB_SPECIAL, cx - d - 6, cy - d - 34, sr, "JUTSU", ICON_JUTSU, 0xe0602c);
-  g_vbuttons.back().kind = VBK_JUTSU;
+  act(VB_BLOCK, cx - d - 6, cy - d - 34, sr, "JUTSU", ICON_JUTSU, 0xe0602c);
+  g_vbuttons.back().kind = VBK_COMBO;
+  // UP+SP above THROW, DN+SP above JUTSU: the game's "up + special" / "down + special" moves
+  act(VB_UP, cx + d + 6, cy - d - 34 - 2 * sr - 10, sr, "UP+SP", ICON_UPSP, 0x2c8ce0);
+  g_vbuttons.back().kind = VBK_COMBO;
+  act(VB_DOWN, cx - d - 6, cy - d - 34 - 2 * sr - 10, sr, "DN+SP", ICON_DNSP, 0x2cb0a8);
+  g_vbuttons.back().kind = VBK_COMBO;
 
   // pills at the top: ESC (left), OK (right), UNLOCK ALL (left, main menu only)
   auto pill = [&](int kind, int sc, float x, float y, float w, float h, const char *lab,
                   const char *const *ic, uint32_t col) {
     VButton b{};
     b.kind = kind; b.scancode = sc; b.x = x; b.y = y; b.w = w; b.h = h;
-    b.label = lab; b.icon = ic; b.color = col; b.visible = kind != VBK_UNLOCK;
+    b.label = lab; b.icon = ic; b.color = col; b.visible = kind != VBK_UNLOCK && kind != VBK_CHEAT;
     g_vbuttons.push_back(b);
   };
   float pw = std::min(std::max(side - 24, 76.0f), 110.0f);
@@ -1246,39 +1272,110 @@ static void layout_screen() {
   pill(VBK_KEY, 28, W - 12 - pw, 12, pw, 36, "OK", nullptr, 0x2f8a5a);
   g_unlock_btn = (int)g_vbuttons.size();
   pill(VBK_UNLOCK, 0, 12, 58, std::max(pw, 150.0f), 36, "UNLOCK ALL", ICON_LOCK, 0xc08a20);
+  // adventure cheats (main menu only): scancode field = cheat id
+  g_cheat_btn[0] = (int)g_vbuttons.size();
+  pill(VBK_CHEAT, 1, 12, 104, std::max(pw, 150.0f), 36, "INF HEALTH", ICON_HEART, 0x5a5f78);
+  g_cheat_btn[1] = (int)g_vbuttons.size();
+  pill(VBK_CHEAT, 2, 12, 150, std::max(pw, 150.0f), 36, "INF JUTSU", ICON_JUTSU, 0x5a5f78);
 }
 
 static void key_for_vb(int vb, bool down);
+
+// ---- per-player actions read directly by the game (PortActDown / PortActHit in Getinput and the
+// menus). Touch controls and game pads no longer depend on keys.cfg: remapping the keys, a key
+// mapped twice or a player set to "joystick" cannot break them any more.
+static int g_pact_count[5][VB_COUNT];
+static int g_pact_hits[5][VB_COUNT];
+static void pact_press(int p, int vb, bool down) {
+  if (p < 1 || p > 4 || vb < 0 || vb >= VB_COUNT) return;
+  std::lock_guard<std::mutex> lk(g_in_mx);
+  int &c = g_pact_count[p][vb];
+  if (down) { if (c++ == 0) g_pact_hits[p][vb]++; }
+  else if (c > 0) c--;
+}
+int bb_portactdown(int p, int vb) {
+  input_poll();
+  return (p >= 1 && p <= 4 && vb >= 0 && vb < VB_COUNT && g_pact_count[p][vb] > 0) ? 1 : 0;
+}
+int bb_portacthit(int p, int vb) {
+  input_poll();
+  if (p < 1 || p > 4 || vb < 0 || vb >= VB_COUNT) return 0;
+  std::lock_guard<std::mutex> lk(g_in_mx);
+  int n = g_pact_hits[p][vb];
+  g_pact_hits[p][vb] = 0;
+  return n;
+}
+static void pact_flush() {
+  std::lock_guard<std::mutex> lk(g_in_mx);
+  memset(g_pact_hits, 0, sizeof g_pact_hits);
+}
+// the game calls PortScreen(3) every frame of a match: then the touch controls only send actions,
+// in the menus they also press player 1's keys (the menus read the keyboard)
+static bool in_match() { return g_screen_id == 3 && g_frame_no - g_screen_frame <= 3; }
+
 // several sources may hold the same action (touch BLOCK + JUTSU, gamepad, ...): count presses and
-// only send the key down on the first press and the key up on the last release
+// only report the press on the first and the release on the last
 static int g_vb_count[VB_COUNT];
+static bool g_vb_keydown[VB_COUNT];
 static void vb_press(int vb, bool down) {
   if (vb < 0 || vb >= VB_COUNT) return;
   int &c = g_vb_count[vb];
-  if (down) { if (c++ == 0) key_for_vb(vb, true); }
-  else if (c > 0 && --c == 0) key_for_vb(vb, false);
+  bool first = false, last = false;
+  if (down) first = c++ == 0;
+  else if (c > 0) last = --c == 0;
+  if (!first && !last) return;
+  pact_press(1, vb, down);
+  if (down && !in_match()) { key_for_vb(vb, true); g_vb_keydown[vb] = true; }
+  else if (!down && g_vb_keydown[vb]) { key_for_vb(vb, false); g_vb_keydown[vb] = false; }
 }
 
-// JUTSU: frame 0 BLOCK down, frame 1 SPECIAL down (game sees BLOCK held + SPECIAL hit = super move),
-// frame 3 SPECIAL up, BLOCK up when the finger is lifted
-struct JutsuState { bool active = false, held = false; int stage = 0, frame = 0; };
-static JutsuState g_jutsu;
+// combo buttons: frame 0 hold the first action (BLOCK for JUTSU, UP, DOWN), frame 1 press SPECIAL
+// (the game sees "BLOCK/UP/DOWN held + SPECIAL hit"), frame 3 release SPECIAL, release the first
+// action when the finger is lifted
+struct ComboState { bool active = false, held = false; int stage = 0, frame = 0; };
+static ComboState g_combo[VB_COUNT];
 static int g_frame_no_fwd() { return g_frame_no; }
-static void jutsu_press(bool down) {
+static void combo_press(int vb, bool down) {
+  ComboState &c = g_combo[vb];
   if (down) {
-    if (g_jutsu.active) return;
-    g_jutsu.active = g_jutsu.held = true;
-    g_jutsu.stage = 1;
-    g_jutsu.frame = g_frame_no_fwd();
-    vb_press(VB_BLOCK, true);
-  } else g_jutsu.held = false;
+    if (c.active) return;
+    c.active = c.held = true;
+    c.stage = 1;
+    c.frame = g_frame_no_fwd();
+    vb_press(vb, true);
+  } else c.held = false;
 }
-static void jutsu_tick() {
-  if (!g_jutsu.active) return;
-  int f = g_frame_no_fwd();
-  if (g_jutsu.stage == 1 && f >= g_jutsu.frame + 1) { vb_press(VB_SPECIAL, true); g_jutsu.stage = 2; g_jutsu.frame = f; }
-  else if (g_jutsu.stage == 2 && f >= g_jutsu.frame + 2) { vb_press(VB_SPECIAL, false); g_jutsu.stage = 3; }
-  else if (g_jutsu.stage == 3 && !g_jutsu.held) { vb_press(VB_BLOCK, false); g_jutsu = JutsuState(); }
+static void combo_tick() {
+  for (int vb = 0; vb < VB_COUNT; vb++) {
+    ComboState &c = g_combo[vb];
+    if (!c.active) continue;
+    int f = g_frame_no_fwd();
+    if (c.stage == 1 && f >= c.frame + 1) { vb_press(VB_SPECIAL, true); c.stage = 2; c.frame = f; }
+    else if (c.stage == 2 && f >= c.frame + 2) { vb_press(VB_SPECIAL, false); c.stage = 3; }
+    else if (c.stage == 3 && !c.held) { vb_press(vb, false); c = ComboState(); }
+  }
+}
+
+// ---- adventure cheats (main menu pills), saved in the data folder
+static int g_cheat[3];
+static bool g_cheat_loaded = false;
+static void cheats_load() {
+  if (g_cheat_loaded) return;
+  g_cheat_loaded = true;
+  FILE *f = fopen((plat_data_dir() + "port_cheats.cfg").c_str(), "r");
+  if (f) { if (fscanf(f, "%d %d", &g_cheat[1], &g_cheat[2]) != 2) g_cheat[1] = g_cheat[2] = 0; fclose(f); }
+}
+static void cheats_save() {
+  FILE *f = fopen((plat_data_dir() + "port_cheats.cfg").c_str(), "w");
+  if (f) { fprintf(f, "%d %d\n", g_cheat[1], g_cheat[2]); fclose(f); }
+}
+int bb_portcheat(int id) { cheats_load(); return (id == 1 || id == 2) ? g_cheat[id] : 0; }
+static void toggle_cheat(int id) {
+  cheats_load();
+  g_cheat[id] = !g_cheat[id];
+  cheats_save();
+  const char *what = id == 1 ? "INFINITE HEALTH" : "INFINITE JUTSU";
+  toast(std::string(what) + (g_cheat[id] ? " ON (ADVENTURE)" : " OFF"));
 }
 
 static void key_for_vb(int vb, bool down) {
@@ -1306,14 +1403,12 @@ static void update_dpad(float x, float y, bool active) {
     if (nd[i] != g_dpad_dir[i]) {
       g_dpad_dir[i] = nd[i];
       vb_press(vbmap[i], nd[i] != 0);
-      // menus are driven by the arrow keys too
+      // menus are driven by the arrow keys too (not during a match: they may be player 2's keys)
       static const int arrows[4] = {200, 208, 203, 205};
-      if (glue_player_code(vbmap[i]) != arrows[i]) rt_key(arrows[i], nd[i] != 0);
+      static bool arrow_down[4];
+      bool want = nd[i] != 0 && !in_match();
+      if (glue_player_code(vbmap[i]) != arrows[i] && want != arrow_down[i]) { rt_key(arrows[i], want); arrow_down[i] = want; }
     }
-  if (glue_player_uses_joy()) {
-    int port = glue_player_port();
-    rt_joy_axis(port, nd[3] ? 1.0f : (nd[2] ? -1.0f : 0.0f), nd[1] ? 1.0f : (nd[0] ? -1.0f : 0.0f));
-  }
 }
 
 static void set_button(int i, bool down) {
@@ -1322,8 +1417,9 @@ static void set_button(int i, bool down) {
   b.down = down;
   if (b.kind == VBK_KEY) rt_key(b.scancode, down);
   else if (b.kind == VBK_ACTION) vb_press(b.vb, down);
-  else if (b.kind == VBK_JUTSU) jutsu_press(down);
+  else if (b.kind == VBK_COMBO) combo_press(b.vb, down);
   else if (b.kind == VBK_UNLOCK && down) start_unlock_macro();
+  else if (b.kind == VBK_CHEAT && down) toggle_cheat(b.scancode);
 }
 
 // distance from a touch to a button (<= 0 inside); pills are rounded rectangles
@@ -1346,7 +1442,7 @@ void rt_touch(int id, float nx, float ny, int action) {
       for (size_t i = 0; i < g_vbuttons.size(); i++) {
         const VButton &b = g_vbuttons[i];
         if (!b.visible) continue;
-        if ((b.kind == VBK_ACTION || b.kind == VBK_JUTSU) && hide_fight_controls()) continue;
+        if ((b.kind == VBK_ACTION || b.kind == VBK_COMBO) && hide_fight_controls()) continue;
         float d = button_distance(b, x, y);
         float slack = b.w > 0 ? 8.0f : b.r * 0.3f;
         if (d <= slack && d < bestd) { bestd = d; best = (int)i; }
@@ -1400,15 +1496,36 @@ void rt_mouse(float nx, float ny, int button, bool down) {
   }
 }
 void rt_vbutton(int vb, bool down) {
-  // physical game pad / keyboard mapped to the player's actions
+  // first game pad = player 1 (also drives the menus with the arrow keys)
   static bool state[VB_COUNT];
+  static bool arrow_down[4];
   if (vb < 0 || vb >= VB_COUNT || state[vb] == down) return;
   state[vb] = down;
   vb_press(vb, down);
   if (vb <= VB_RIGHT) {
     static const int arrows[4] = {200, 208, 203, 205};
-    if (glue_player_code(vb) != arrows[vb]) rt_key(arrows[vb], down);
+    bool want = down && !in_match();
+    if (glue_player_code(vb) != arrows[vb] && want != arrow_down[vb]) { rt_key(arrows[vb], want); arrow_down[vb] = want; }
   }
+}
+// game pads by device: the first pad that is used plays player 1, the second player 2, ...
+// Returns the player number of that pad.
+int rt_pad(int device, int vb, bool down) {
+  static std::vector<int> ids;
+  static bool state[8][VB_COUNT];
+  size_t slot = 0;
+  while (slot < ids.size() && ids[slot] != device) slot++;
+  if (slot == ids.size()) {
+    if (!down || ids.size() >= 4) return 0;     // a fifth pad is ignored
+    ids.push_back(device);
+    logf_("game pad %d -> player %d", device, (int)slot + 1);
+  }
+  int player = (int)slot + 1;
+  if (vb < 0 || vb >= VB_COUNT || state[slot][vb] == down) return player;
+  state[slot][vb] = down;
+  if (player == 1) rt_vbutton(vb, down);
+  else pact_press(player, vb, down);
+  return player;
 }
 void rt_touch_cancel_all() {
   for (auto &kv : g_touch_owner) {
@@ -1594,7 +1711,7 @@ static void present_frame() {
   if (!f) return;
   g_frame_no++;
   run_macro();
-  jutsu_tick();
+  combo_tick();
   int aspect_now = (int)(plat_screen_aspect() * 1000);
   static int aspect_prev = -1;
   static int overlay_prev = -1;
@@ -1621,11 +1738,26 @@ static void present_frame() {
       u.visible = on_main_menu();
       if (!u.visible && u.down) u.down = false;
     }
+    for (int ci = 0; ci < 2; ci++)
+      if (g_cheat_btn[ci] >= 0) {
+        VButton &c = g_vbuttons[g_cheat_btn[ci]];
+        c.visible = on_main_menu();
+        if (!c.visible && c.down) c.down = false;
+      }
     bool fight = !hide_fight_controls();
     if (fight) draw_dpad();
     for (auto &b : g_vbuttons) {
       if (!b.visible) continue;
-      if ((b.kind == VBK_ACTION || b.kind == VBK_JUTSU) && !fight) continue;
+      if ((b.kind == VBK_ACTION || b.kind == VBK_COMBO) && !fight) continue;
+      if (b.kind == VBK_CHEAT) {
+        cheats_load();
+        VButton c = b;
+        bool on = g_cheat[b.scancode] != 0;
+        c.color = on ? 0x2f8a4a : 0x5a5f78;
+        c.label = b.scancode == 1 ? (on ? "HEALTH: ON" : "HEALTH: OFF") : (on ? "JUTSU: ON" : "JUTSU: OFF");
+        draw_pill(c, false);
+        continue;
+      }
       if (b.w > 0) draw_pill(b, b.kind == VBK_UNLOCK && glue_cheat_unlocked() && g_macro_state == 0);
       else draw_action(b);
     }

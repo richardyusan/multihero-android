@@ -217,11 +217,12 @@ var padPrev = {};
 function setPad(key, on, fn) { if (!!padPrev[key] !== on) { padPrev[key] = on; fn(on ? 1 : 0); } }
 Module.mhPollPads = function () {
   if (!navigator.getGamepads) return;
-  var pads = navigator.getGamepads(), state = { 0:0,1:0,2:0,3:0,4:0,5:0,6:0,7:0,8:0 }, esc = false, ok = false, any = false;
+  // every pad is its own player (first pad used = player 1, then 2, 3, 4)
+  var pads = navigator.getGamepads(), esc = false, ok = false;
   for (var i = 0; i < pads.length; i++) {
     var g = pads[i];
     if (!g || !g.connected) continue;
-    any = true;
+    var state = { 0:0,1:0,2:0,3:0,4:0,5:0,6:0,7:0,8:0 };
     var b = function (n) { return g.buttons[n] && g.buttons[n].pressed; };
     for (var k in PAD_BTN) if (b(+k)) state[PAD_BTN[k]] = 1;
     var ax = g.axes[0] || 0, ay = g.axes[1] || 0;
@@ -231,9 +232,10 @@ Module.mhPollPads = function () {
     if (b(15) || ax > 0.5) state[3] = 1;
     if (b(8)) esc = true;
     if (b(9)) ok = true;
+    for (var v = 0; v < 9; v++) (function (v, idx) {
+      setPad('p' + idx + 'vb' + v, !!state[v], function (d) { Module._web_pad(idx, v, d); });
+    })(v, g.index);
   }
-  if (!any) return;
-  for (var v = 0; v < 9; v++) (function (v) { setPad('vb' + v, !!state[v], function (d) { Module._web_vbutton(v, d); }); })(v);
   setPad('esc', esc, function (d) { Module._web_key(1, d); });
   setPad('ok', ok, function (d) { Module._web_key(28, d); });
 };

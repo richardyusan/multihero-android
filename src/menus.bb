@@ -373,6 +373,7 @@ Repeat
     If JoyHit(shotK(n),controllerPort(n)) Or JoyHit(specialK(n),controllerPort(n)) Then pressed=1
   End Select
  Next
+ If portAnyPress() Then pressed=1	;[android port] touch / game pads
 Delay(10)
 Until pressed=1
 flushkeys() : flushjoy()
@@ -1448,6 +1449,7 @@ Case 1
 	If JoyHit(shotK(n),controllerPort(n)) Then shotKey(n)=1
 
 End Select
+portPointerActions(n)	;[android port] this player's game pad
 Next
 
 pve=5
@@ -1642,15 +1644,15 @@ color 28,28,28
 rect x,y,220,20,1
 
 Select keyschosen
-Case 1:pri x,y,strInfo$(51): flip:upK(pn)=getTheKey(controllerPort(pn))
-Case 2:pri x,y,strInfo$(52): flip:downK(pn)=getTheKey(controllerPort(pn))
-Case 3:pri x,y,strInfo$(53): flip:leftK(pn)=getTheKey(controllerPort(pn))
-Case 4:pri x,y,strInfo$(54): flip:rightK(pn)=getTheKey(controllerPort(pn))
-Case 5:pri x,y,strInfo$(55): flip:shotK(pn)=getTheKey(controllerPort(pn))
-Case 6:pri x,y,strInfo$(56): flip:specialK(pn)=getTheKey(controllerPort(pn))
-Case 7:pri x,y,strInfo$(57): flip:jumpK(pn)=getTheKey(controllerPort(pn))
-Case 8:pri x,y,strInfo$(58): flip:blockK(pn)=getTheKey(controllerPort(pn))
-Case 9:pri x,y,strInfo$(59): flip:grabK(pn)=getTheKey(controllerPort(pn))
+Case 1:pri x,y,strInfo$(51): flip:k=getTheKey(controllerPort(pn)) : If k > 0 Then upK(pn)=k	;[android port] ESC keeps the old key
+Case 2:pri x,y,strInfo$(52): flip:k=getTheKey(controllerPort(pn)) : If k > 0 Then downK(pn)=k	;[android port] ESC keeps the old key
+Case 3:pri x,y,strInfo$(53): flip:k=getTheKey(controllerPort(pn)) : If k > 0 Then leftK(pn)=k	;[android port] ESC keeps the old key
+Case 4:pri x,y,strInfo$(54): flip:k=getTheKey(controllerPort(pn)) : If k > 0 Then rightK(pn)=k	;[android port] ESC keeps the old key
+Case 5:pri x,y,strInfo$(55): flip:k=getTheKey(controllerPort(pn)) : If k > 0 Then shotK(pn)=k	;[android port] ESC keeps the old key
+Case 6:pri x,y,strInfo$(56): flip:k=getTheKey(controllerPort(pn)) : If k > 0 Then specialK(pn)=k	;[android port] ESC keeps the old key
+Case 7:pri x,y,strInfo$(57): flip:k=getTheKey(controllerPort(pn)) : If k > 0 Then jumpK(pn)=k	;[android port] ESC keeps the old key
+Case 8:pri x,y,strInfo$(58): flip:k=getTheKey(controllerPort(pn)) : If k > 0 Then blockK(pn)=k	;[android port] ESC keeps the old key
+Case 9:pri x,y,strInfo$(59): flip:k=getTheKey(controllerPort(pn)) : If k > 0 Then grabK(pn)=k	;[android port] ESC keeps the old key
 
 End Select
 
