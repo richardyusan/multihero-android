@@ -105,7 +105,7 @@ NetBackend *net_create_backend(const std::string &kindIn, std::string &note) {
   }
   if (kind == "relay") {
     if (NetBackend *b = net_create_relay()) return b;
-    note = "vps relay not available in the browser - using demo";
+    note = "vps relay not available on this platform - using demo";
   }
   return net_create_demo();
 }
@@ -236,6 +236,17 @@ struct NetPlay {
   std::map<std::pair<int, int>, uint32_t> peerCheck;  // (slot, frame) -> checksum
   int desyncFrame = -1;
   int64_t lastPacketMs = 0;
+  // a player that disappears in the middle of a match (app closed, network gone): every phone that
+  // is left reports the last frame it has of that player's input ("L" message) and forwards those
+  // inputs ("R"); when all reports are in, the highest frame is the cut: up to it the player's
+  // inputs are used, after it the CPU plays that slot - the same frame on every phone.
+  std::vector<bool> leaving, kicked_me;
+  std::vector<std::map<int, int>> reports;    // slot -> (reporter slot -> last frame)
+  std::vector<int> cut;                       // -1 = not decided
+  std::vector<int64_t> lastFrom;              // ms of the last packet from each slot
+  std::vector<bool> heard;                    // got anything from this slot in this match
+  int curFrame = 0;
+  bool kicked = false;                        // the others decided that I left
 } g_np;
 std::vector<NetMember> g_np_members;          // players frozen when the match started
 
@@ -258,6 +269,7 @@ void np_compare(int slot, int frame) {
   g_np.peerCheck.erase(b);
 }
 
+void np_start_leave(int who);
 void np_poll() {
   if (!net()) return;
   net()->update(net_now_ms());
@@ -275,14 +287,64 @@ void np_poll() {
     int frame = atoi(m.data.c_str() + colon + 1);
     long long v = atoll(m.data.c_str() + comma + 1);
     g_np.lastPacketMs = net_now_ms();
+    g_np.lastFrom[slot] = g_np.lastPacketMs;
+    g_np.heard[slot] = true;
     if (kind == 'I') g_np.masks[slot][frame] = (int)v;
     else if (kind == 'C') { g_np.peerCheck[{slot, frame}] = (uint32_t)v; np_compare(slot, frame); }
+    else if (kind == 'R') {                   // forwarded input of a player who left
+      int who = (int)(v / 1000000), mask = (int)(v % 1000000);
+      if (who >= 1 && who <= g_np.players && !g_np.masks[who].count(frame)) g_np.masks[who][frame] = mask;
+    } else if (kind == 'L') {                 // "player <frame field> left, my last frame of them is v"
+      int who = frame;
+      if (who < 1 || who > g_np.players) continue;
+      if (who == g_np.local) { g_np.kicked = true; continue; }
+      np_start_leave(who);
+      g_np.reports[who][slot] = (int)v;
+    }
   }
 }
 
 void np_send(char kind, int frame, long long v) {
   if (!net()) return;
   net()->sendGame(std::string(1, kind) + g_np.token + ":" + std::to_string(frame) + "," + std::to_string(v));
+}
+
+// we noticed (or were told) that slot "who" is gone: report our last frame of their input and
+// forward the inputs we have from around the current frame (the others may miss some of them)
+void np_start_leave(int who) {
+  if (g_np.leaving[who] || !g_np.active[who]) return;
+  g_np.leaving[who] = true;
+  auto &mm = g_np.masks[who];
+  int last = mm.empty() ? -1 : mm.rbegin()->first;
+  for (auto &kv : mm)
+    if (kv.first >= g_np.curFrame - 64) np_send('R', kv.first, (long long)who * 1000000 + kv.second);
+  np_send('L', who, last);
+  g_np.reports[who][g_np.local] = last;
+  char buf[96];
+  snprintf(buf, sizeof buf, "netplay: player %d is gone, my last frame of them %d", who, last);
+  plat_log(buf);
+}
+
+// all remaining players reported: decide the cut frame
+void np_resolve(int who) {
+  if (!g_np.leaving[who] || g_np.cut[who] >= 0 || !g_np.active[who]) return;
+  int cut = -1;
+  for (int r = 1; r <= g_np.players; r++) {
+    if (r == who || !g_np.active[r] || g_np.leaving[r]) continue;
+    auto it = g_np.reports[who].find(r);
+    if (it == g_np.reports[who].end()) return;            // still waiting for this player's report
+    cut = std::max(cut, it->second);
+  }
+  g_np.cut[who] = cut < 0 ? 0 : cut;
+  char buf[96];
+  snprintf(buf, sizeof buf, "netplay: player %d left, CPU from frame %d", who, g_np.cut[who] + 1);
+  plat_log(buf);
+}
+
+bool np_member_present(int s) {
+  if (!net()) return false;
+  for (auto &m : net()->members) if (m.id == g_np.ids[s]) return true;
+  return false;
 }
 }  // namespace
 
@@ -310,6 +372,11 @@ int bb_netplaybegin(int delay) {
   g_np.human.assign(g_np.players + 1, false);
   g_np.active.assign(g_np.players + 1, false);
   g_np.masks.assign(g_np.players + 1, std::map<int, int>());
+  g_np.leaving.assign(g_np.players + 1, false);
+  g_np.reports.assign(g_np.players + 1, std::map<int, int>());
+  g_np.cut.assign(g_np.players + 1, -1);
+  g_np.lastFrom.assign(g_np.players + 1, net_now_ms());
+  g_np.heard.assign(g_np.players + 1, false);
   for (int s = 1; s <= g_np.players; s++) {
     const NetMember &m = g_np_members[s - 1];
     g_np.ids[s] = m.id;
@@ -334,10 +401,60 @@ void bb_netplaysend(int frame, int mask) {
 }
 int bb_netplayready(int frame) {
   if (!g_np.on) return 1;
+  g_np.curFrame = frame;
   np_poll();
-  for (int s = 1; s <= g_np.players; s++)
-    if (g_np.active[s] && !g_np.masks[s].count(frame)) return 0;
-  return 1;
+  int64_t now = net_now_ms();
+  bool ready = true;
+  for (int s = 1; s <= g_np.players; s++) {
+    if (!g_np.active[s] || s == g_np.local) {
+      if (s == g_np.local && !g_np.masks[s].count(frame)) ready = false;
+      continue;
+    }
+    if (!g_np.leaving[s] && !g_np.masks[s].count(frame)) {
+      // gone from the room, or silent for a long time (only once we heard from them: a slow
+      // phone may still be loading the stage)
+      bool gone = !np_member_present(s) || (g_np.heard[s] && now - g_np.lastFrom[s] > 15000) ||
+                  (!g_np.heard[s] && now - g_np.lastFrom[s] > 60000);
+      if (gone) np_start_leave(s);
+    }
+    if (g_np.leaving[s]) {
+      np_resolve(s);
+      if (g_np.cut[s] < 0) { ready = false; continue; }
+      if (frame <= g_np.cut[s] && !g_np.masks[s].count(frame)) ready = false;
+      continue;
+    }
+    if (!g_np.masks[s].count(frame)) ready = false;
+  }
+  return ready ? 1 : 0;
+}
+// frame after which the CPU plays this slot because the player left (-1 = still playing)
+int bb_netplayleftat(int slot) {
+  if (!g_np.on || slot < 1 || slot > g_np.players || !g_np.leaving[slot]) return -1;
+  return g_np.cut[slot];
+}
+// 1 = the other players decided that this phone left the match (it was too slow / offline)
+int bb_netplaykicked() { return g_np.on && g_np.kicked ? 1 : 0; }
+// HUD: 0 = no player, 1 = connected, 2 = no data for a while, 3 = left (CPU now), 4 = CPU (demo bot)
+int bb_netplayslotstate(int s) {
+  if (!g_np.on || s < 1 || s > g_np.players) return 0;
+  if (!g_np.human[s]) return 4;
+  if (!g_np.active[s] || g_np.leaving[s]) return 3;
+  if (s == g_np.local) return 1;
+  return net_now_ms() - g_np.lastFrom[s] > 1500 ? 2 : 1;
+}
+// HUD ping: mine = my round trip to the host; the host's slot = my round trip to the host;
+// other players = their round trip to the host (from the room)
+int bb_netplayslotping(int s) {
+  if (!g_np.on || !net() || s < 1 || s > g_np.players) return -1;
+  bool meHost = net()->isHost();
+  if (s == g_np.local) return meHost ? -1 : net()->ping;
+  for (auto &m : net()->members)
+    if (m.id == g_np.ids[s]) return m.host ? (meHost ? -1 : net()->ping) : m.ping;
+  return -1;
+}
+BStr bb_netplayslotname(int s) {
+  if (s < 1 || s > (int)g_np_members.size()) return "";
+  return g_np_members[s - 1].name;
 }
 int bb_netplaymask(int slot, int frame) {
   if (!g_np.on || slot < 1 || slot > g_np.players) return 0;

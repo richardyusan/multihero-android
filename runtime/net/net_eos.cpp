@@ -94,9 +94,9 @@ bool init_platform(const NetConfig &cfg) {
   EOS_InitializeOptions io = {};
   io.ApiVersion = EOS_INITIALIZE_API_LATEST;
   io.ProductName = "MultiHero";
-  io.ProductVersion = "0.96-android1.6";
+  io.ProductVersion = "0.96-android1.7";
   std::string dir = plat_data_dir() + "eos";
-  mkdir(dir.c_str(), 0700);
+  MH_MKDIR(dir.c_str(), 0700);
 #ifdef __ANDROID__
   static EOS_Android_InitializeOptions ao = {};
   static std::string sdir;
@@ -122,7 +122,7 @@ bool init_platform(const NetConfig &cfg) {
   cid = cfg.get("eos_client_id");
   csec = cfg.get("eos_client_secret");
   cache = dir + "/cache";
-  mkdir(cache.c_str(), 0700);
+  MH_MKDIR(cache.c_str(), 0700);
   if (pid.empty() || sid.empty() || did.empty() || cid.empty() || csec.empty()) {
     g_init_error = "eos credentials missing in online.cfg";
     return false;

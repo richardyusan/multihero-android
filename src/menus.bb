@@ -923,6 +923,24 @@ If warnSeq > 140 Then warning=0
 End Function 
 
 ;----------- Main menu ---------------------------------------------------------
+Function cheatUnlockAll()	;[android port] the game's cheat_1 (BACKSPACE x5 + ENTER on the main menu)
+cheat(1)=1  ;cheat_1 activated
+If gameSound Then PlaySound energySnd
+For n=4 To characterAmount ;unlock all playable characters
+	characterOpen(n)=1
+Next
+;also open every adventure and CTF map that exists in the current mod
+For n=1 To maxAmap
+	If FileType(modFolder$(curModId) + "amap" + n + ".dat")=1 And FileType(modFolder$(curModId) + "amap_" + n + ".jpg")=1 Then mapOpen(n)=1
+Next
+For n=1 To maxCTFMap
+	If FileType(modFolder$(curModId) + "CTFmap" + n + ".dat")=1 And FileType(modFolder$(curModId) + "CTFmap_" + n + ".jpg")=1 Then CTFmapOpen(n)=1
+Next
+For n=1 To 30
+	vsMapOpen(n)=1
+Next
+End Function
+
 Function mainMenu()
 
 pointers
@@ -934,18 +952,7 @@ EndIf
 
 If KeyHit(28) Then  ;ENTER key
 	If cheatSeq(1)=5 And cheat(1)=0 Then
-		cheat(1)=1  ;cheat_1 activated
-		If gameSound Then PlaySound energySnd
-        For n=4 To characterAmount ;unlock all playable characters
-            characterOpen(n)=1
-	    Next
-		;[android port] also open every adventure and CTF map that exists in the current mod
-		For n=1 To maxAmap
-			If FileType(modFolder$(curModId) + "amap" + n + ".dat")=1 And FileType(modFolder$(curModId) + "amap_" + n + ".jpg")=1 Then mapOpen(n)=1
-		Next
-		For n=1 To maxCTFMap
-			If FileType(modFolder$(curModId) + "CTFmap" + n + ".dat")=1 And FileType(modFolder$(curModId) + "CTFmap_" + n + ".jpg")=1 Then CTFmapOpen(n)=1
-		Next
+		cheatUnlockAll()	;[android port] moved into a function (also used by the CHEATS page)
 	EndIf
 	For n=1 To 30
 		vsMapOpen(n)=1
@@ -959,9 +966,10 @@ If clickedBut(n) Then
 	Case 1: menuOption=1:vsMode=0 :defineButtons(1)
 	Case 2: menuOption=1:vsMode=1      ;go to character Select screen (vs mode)
 	Case 3: menuOption=6			   ;[android port] multiplayer online lobby
-	Case 4: menuOption=3 			   ;go to options screen
-	Case 5: rollCredits()
-	Case 6: saveConfig() : end
+	Case 4: menuOption=7			   ;[android port] cheats page (port.bb)
+	Case 5: menuOption=3 			   ;go to options screen
+	Case 6: rollCredits()
+	Case 7: saveConfig() : end
   End Select
 	If gamesound Then PlaySound ddhitsnd
 EndIf
@@ -969,18 +977,19 @@ Next
 
 ;----------Buttons attributes--------------------------
 x=0 : y=0
-buttonAmount = 6	;[android port] was 5, + multiplayer online
-For b= 1 To 6
-	xBut(b)=180+x:yBut(b)=195+y:wBut(b)=280:hBut(b)=22
-	y=y+30
+buttonAmount = 7	;[android port] was 5, + multiplayer online, cheats
+For b= 1 To 7
+	xBut(b)=180+x:yBut(b)=185+y:wBut(b)=280:hBut(b)=22
+	y=y+29
 Next
 
 butText$(1)=strInfo$(14)
 butText$(2)=strInfo$(21)
 butText$(3)="multiplayer online"	;[android port]
-butText$(4)=strInfo$(15)
-butText$(5)=strInfo$(40)
-butText$(6)=strInfo$(50)
+butText$(4)="cheats"	;[android port]
+butText$(5)=strInfo$(15)
+butText$(6)=strInfo$(40)
+butText$(7)=strInfo$(50)
 
 ;-----Rendering menu --------------------------------
 fontType=1
@@ -1795,4 +1804,4 @@ End Function
 ;---------------------- Roll Credits ------------------------
 Function rollCredits()
 
-End Function 
+End Function 

@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.7.0 – 2026-11-04
+- Main menu **CHEATS** page: INFINITE HEALTH, INFINITE JUTSU (Adventure mode) and UNLOCK ALL CHARACTERS + MAPS as
+  ON/OFF items that the mouse (PC, web), the touch screen and the pads can click.
+- Online match: every player is shown at the bottom of the screen with a connection light (green connected, yellow
+  slow, red left, grey CPU) and the ping.
+- Online match: when a player leaves (ESC, app closed, connection gone) everybody sees "<name> left the room" and the
+  CPU plays on for that player. The phones that remain agree on the same frame for the hand-over (every phone reports
+  the last input it has of that player), so matches with 3-4 players go on in sync. Before, a lost player stopped the
+  match for everybody.
+- Online room: the host picks the stage from a grid of stage pictures (like the fighter picker); the chosen stage is
+  shown as a small picture in the room.
+
 ## 1.6.0 – 2026-11-03
 - New touch buttons, same size as THROW / JUTSU: **UP+SP** above THROW (hold UP + SPECIAL, the game's "up special")
   and **DN+SP** above JUTSU (hold DOWN + SPECIAL, "down special").

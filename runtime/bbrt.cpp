@@ -259,7 +259,7 @@ static void mkdirs_for(const std::string &np) {
   std::string base = plat_data_dir();
   for (size_t k = np.find('/'); k != std::string::npos; k = np.find('/', k + 1)) {
     std::string d = base + np.substr(0, k);
-    mkdir(d.c_str(), 0777);
+    MH_MKDIR(d.c_str(), 0777);
   }
 }
 
@@ -587,6 +587,29 @@ int bb_loadimage(const BStr &path) {
   return id;
 }
 int bb_createimage(int w, int h, int frames) { return new_image(w, h, frames); }
+// [port] new image = frame 0 of "src" scaled to w x h (box filter, for small thumbnails)
+int bb_portresizeimage(int src, int w, int h) {
+  Image *si = img(src);
+  if (!si || w <= 0 || h <= 0) return 0;
+  int id = new_image(w, h, 1);
+  Image *di = img(id);
+  si = img(src);   // new_image may have moved the table
+  const uint32_t *sp = si->frame(0);
+  for (int y = 0; y < h; y++)
+    for (int x = 0; x < w; x++) {
+      int x0 = x * si->w / w, x1 = std::max(x0 + 1, (x + 1) * si->w / w);
+      int y0 = y * si->h / h, y1 = std::max(y0 + 1, (y + 1) * si->h / h);
+      unsigned r = 0, g = 0, b = 0, n = 0;
+      for (int yy = y0; yy < y1; yy++)
+        for (int xx = x0; xx < x1; xx++) {
+          uint32_t c = sp[(size_t)yy * si->w + xx];
+          r += (c >> 16) & 255; g += (c >> 8) & 255; b += c & 255; n++;
+        }
+      uint32_t c = n ? ((r / n) << 16 | (g / n) << 8 | (b / n)) : 0;
+      di->px[(size_t)y * w + x] = c ? c : 0x010101;   // keep pure black visible (black = mask)
+    }
+  return id;
+}
 void bb_freeimage(int id) {
   if (id <= 0 || id >= (int)g_images.size() || !g_images[id] || id == g_front || id == g_back) return;
   if (id == g_cur_buf_img) g_cur_buf_img = g_back;
@@ -1370,6 +1393,12 @@ static void cheats_save() {
   if (f) { fprintf(f, "%d %d\n", g_cheat[1], g_cheat[2]); fclose(f); }
 }
 int bb_portcheat(int id) { cheats_load(); return (id == 1 || id == 2) ? g_cheat[id] : 0; }
+void bb_portsetcheat(int id, int on) {
+  cheats_load();
+  if (id != 1 && id != 2) return;
+  g_cheat[id] = on ? 1 : 0;
+  cheats_save();
+}
 static void toggle_cheat(int id) {
   cheats_load();
   g_cheat[id] = !g_cheat[id];

@@ -636,7 +636,7 @@ Repeat 	;--------Menus loop-------------------------
 WaitTimer(frameTimer)
 Cls
 
-If menuOption=2 Or menuOption=3 Or menuOption=4 Or menuOption=6 Then
+If menuOption=2 Or menuOption=3 Or menuOption=4 Or menuOption=6 Or menuOption=7 Then
 	DrawImage backg1,0,0
 	DrawImage title,24,24
 	fontType=2
@@ -652,6 +652,7 @@ If KeyHit(1) Then
   If menuOption = 3 Then menuOption = 2
   If menuOption = 4 Then menuOption = 3 : savekeys()
   If menuOption = 6 Then onlineBack()	;[android port]
+  If menuOption = 7 Then menuOption = 2	;[android port] cheats page
 EndIf
 
 Select menuOption
@@ -660,6 +661,7 @@ Select menuOption
 	Case 3: optionsMenu()   ;Options menu
 	Case 4: controlsMenu()   ;Controls menu
 	Case 6: onlineMenu()   ;[android port] multiplayer online lobby (online.bb)
+	Case 7: cheatsMenu()   ;[android port] cheats page (port.bb)
 End Select
 
 If warning=1 Then
@@ -5828,4 +5830,4 @@ If zBlowStill(n)=0 Then
 	zy(n)=zy(n)+speed
 EndIf	
 
-End Function
+End Function

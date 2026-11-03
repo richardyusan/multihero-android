@@ -30,12 +30,12 @@
 - **Touch controls** in the side bars of wide screens: large D-pad + ATTACK / JUMP / SPECIAL / BLOCK / THROW / JUTSU / UP+SP / DN+SP buttons with icons, ESC / OK
 - **Combo buttons**: **JUTSU** = super move (hold BLOCK + SPECIAL), **UP+SP** = up special (hold UP + SPECIAL,
   e.g. the extra air jump), **DN+SP** = down special (hold DOWN + SPECIAL)
-- **Adventure cheats** on the main menu: **INFINITE HEALTH** and **INFINITE JUTSU** (super bar always full),
-  each switched on/off separately, only active in Adventure mode
+- **CHEATS** page in the main menu (and touch switches on the main menu): **INFINITE HEALTH**, **INFINITE JUTSU**
+  (super bar always full) – Adventure mode only – and **UNLOCK ALL CHARACTERS + MAPS**, each ON/OFF
 - **UNLOCK ALL** button on the main menu – runs the game's own cheat (Backspace ×5, Enter): all characters, VS stages,
   and (added by the port) all 50 Adventure maps and the CTF maps
 - **MULTIPLAYER ONLINE**: real-time online VS matches for up to 4 players; lobby with room list, ping, player count,
-  character and stage choice, READY, START – through **Epic Online Services** (free P2P, no own server), your own lobby server (e.g. Oracle Cloud free VPS) or an offline demo ([docs/ONLINE.md](docs/ONLINE.md))
+  character choice, stage choice with pictures, READY, START, every player's connection and ping during the match – through **Epic Online Services** (free P2P, no own server), your own lobby server (e.g. Oracle Cloud free VPS) or an offline demo ([docs/ONLINE.md](docs/ONLINE.md))
 - **Several gamepads** (Bluetooth/USB): the first pad used is player 1, the second player 2, up to 4 – local VS and
   Adventure with friends; players 2-4 move their menu pointer with their pad. Hardware keyboards work too
 - Crisp "sharp bilinear" scaling with OpenGL ES 2, low-latency audio via AAudio

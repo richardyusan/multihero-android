@@ -38,6 +38,10 @@ Dim npActive(4)		;1 = a person still plays this slot (we wait for their input)
 Dim olHeroName$(10)
 Dim olHeroPic(10)	;standing sprite of each fighter (loaded when the lobby opens)
 Global olPicker		;1 while the character picker is open
+Global olStagePicker	;1 while the stage picker is open
+Dim olMapPic(15)	;stage thumbnails (100x75) and small versions (40x30) for the room
+Dim olMapMini(15)
+Global npNoticeText$, npNoticeTime	;banner during an online match ("x left the room")
 olHeroName$(1)="ryu" : olHeroName$(2)="rash" : olHeroName$(3)="spider-man" : olHeroName$(4)="mario"
 olHeroName$(5)="mike" : olHeroName$(6)="gaiden" : olHeroName$(7)="batman" : olHeroName$(8)="predator"
 olHeroName$(9)="goku" : olHeroName$(10)="richter"
@@ -51,7 +55,13 @@ If olActive=0 Then
 	olSetInfo("")
 	If npMsg$ <> "" Then olSetInfo(npMsg$) : npMsg$ = ""
 	If NetMyHero()=0 Then NetSetHero(Rand(1,10))
-	olPicker=0
+	olPicker=0 : olStagePicker=0
+	For i=1 To 15
+		If olMapPic(i)=0 Then
+			olMapPic(i)=LoadImage("Maps\Original\map_"+i+".jpg")
+			If olMapPic(i) <> 0 Then olMapMini(i)=PortResizeImage(olMapPic(i),40,30)
+		EndIf
+	Next
 	For i=1 To 10
 		If olHeroPic(i)=0 Then olHeroPic(i)=LoadImage("gfx\"+i+"\zwalk0.bmp")
 	Next
@@ -59,7 +69,7 @@ EndIf
 
 NetUpdate()
 PortScreen(2)	;hide the touch fighting controls, they would cover the lobby buttons
-buttonAmount = 45	;lobby buttons 1-7, rows 10-15, my character 20, picker 30-40
+buttonAmount = 70	;lobby buttons 1-7, rows 10-15, my character 20, fighter picker 30-40, stage picker 50-66
 pointers
 
 If NetMatchStarted() Then
@@ -146,6 +156,9 @@ End Function
 ; sent for frame npFrame+npDelay; then every human slot gets the buttons sent for npFrame.
 Function npSync()
 If npLeaving Or npLost Then Return
+If NetPlayKicked() Then
+	npLost=1 : npMsg$ = "connection too slow - you left the match" : gameDone=1 : Return
+EndIf
 mask = npPack(1)
 If npQuitAsk = -1 Then mask = mask Or 16384 : npLeaving = 1
 NetPlaySend(npFrame+npDelay, mask)
@@ -156,10 +169,11 @@ If NetPlayReady(npFrame)=0 Then
 	Repeat
 		w = MilliSecs()-t0
 		If w > 300 Then npWaitScreen(w)
-		If NetPlayPeerGone() And w > 4000 Then npLost=1
-		If w > 20000 Then npLost=1
+		;a player who disappears is handed to the CPU by NetPlayReady (after ~15 s without data);
+		;give up only if nothing works for a long time, or if the others decided that we left
+		If NetPlayKicked() Then npLost=1 : npMsg$ = "connection too slow - you left the match"
+		If w > 40000 Then npLost=1 : npMsg$ = "connection lost - the match was stopped"
 		If npLost Then
-			npMsg$ = "connection lost - the match was stopped"
 			gameDone = 1
 			Return
 		EndIf
@@ -170,10 +184,17 @@ npLastSync = MilliSecs()
 
 For s=1 To npPlayers
 	If npActive(s) Then
-		m = NetPlayMask(s, npFrame)
-		npUnpack(s, m)
-		If m And 16384 Then		;this player left: the CPU plays on for them
+		c = NetPlayLeftAt(s)
+		If c >= 0 And npFrame > c Then	;disappeared (same frame on every phone): the CPU plays on
 			npActive(s)=0 : zAI(s)=1 : aiLevel(s)=3 : NetPlaySetCpu(s)
+			npNotice(olText$(NetPlaySlotName$(s))+" left the room - cpu plays p"+s)
+		Else
+			m = NetPlayMask(s, npFrame)
+			npUnpack(s, m)
+			If m And 16384 Then		;this player left with ESC: the CPU plays on for them
+				npActive(s)=0 : zAI(s)=1 : aiLevel(s)=3 : NetPlaySetCpu(s)
+				npNotice(olText$(NetPlaySlotName$(s))+" left the match - cpu plays p"+s)
+			EndIf
 		EndIf
 	EndIf
 Next
@@ -229,18 +250,63 @@ EndIf
 End Function
 
 ;drawn over the game every frame
+Function npNotice(t$)
+npNoticeText$ = t$
+npNoticeTime = MilliSecs()
+End Function
+
 Function npOverlay()
-;bottom centre: the top row is the players' life bars, the corners are under the touch controls
-Color 0,0,0 : Rect 228,460,184,18,1
-Color 120,230,140 : Text 232,461,"ONLINE P"+npSlot
-olPing(316,461,npPingNow())
+;bottom centre (the top row is the players' life bars, the corners are under the touch controls):
+;every player with a connection light (green ok, yellow slow, red left, grey CPU) and the ping
+w = 104
+x0 = 320 - npPlayers*w/2
+Color 0,0,0 : Rect x0-4,458,npPlayers*w+8,20,1
+For s=1 To npPlayers
+	x = x0 + (s-1)*w
+	st = NetPlaySlotState(s)
+	Select st
+		Case 1: Color 60,210,90
+		Case 2: Color 230,200,60
+		Case 3: Color 230,70,60
+		Default: Color 120,120,130
+	End Select
+	Oval x+2,463,9,9,1
+	If s = npSlot Then Color 120,220,255 Else Color 230,230,240
+	Text x+14,460,"P"+s
+	If st = 3 Then
+		Color 230,70,60 : Text x+38,460,"left"
+	ElseIf st = 4 Then
+		Color 150,150,160 : Text x+38,460,"cpu"
+	Else
+		p = NetPlaySlotPing(s)
+		If p < 0 Then
+			Color 200,200,215
+			If s = 1 Then Text x+38,460,"host" Else Text x+38,460,"-"
+		Else
+			If p < 80 Then
+				Color 60,210,90
+			ElseIf p < 160 Then
+				Color 230,200,60
+			Else
+				Color 230,70,60
+			EndIf
+			Text x+38,460,p+"ms"
+		EndIf
+	EndIf
+Next
+If npNoticeText$ <> "" And MilliSecs()-npNoticeTime < 4000 Then
+	t$ = npNoticeText$
+	Color 0,0,0 : Rect 316-Len(t$)*4,62,Len(t$)*8+8,20,1
+	Color 255,210,90 : Rect 316-Len(t$)*4,62,Len(t$)*8+8,20,0
+	Text 320-Len(t$)*4,64,t$
+EndIf
 If npQuitAsk > 0 And MilliSecs()-npQuitAsk < 3000 Then
 	Color 0,0,0 : Rect 160,40,320,20,1
 	Color 255,210,90 : Text 320-4*Len("press ESC again to leave the match"),42,"press ESC again to leave the match"
 EndIf
 If NetPlayDesync() >= 0 Then
-	Color 0,0,0 : Rect 268,440,104,18,1
-	Color 255,90,80 : Text 272,441,"out of sync!"
+	Color 0,0,0 : Rect 268,436,104,18,1
+	Color 255,90,80 : Text 272,437,"out of sync!"
 EndIf
 End Function
 
@@ -390,8 +456,20 @@ Function olRoomScreen()
 host = NetIsHost()
 status$ = NetStatus$()
 canEdit = (status$="in room")
-If canEdit=0 Then olPicker = 0
-pickerWasOpen = olPicker
+If canEdit=0 Then olPicker = 0 : olStagePicker = 0
+If host=0 Then olStagePicker = 0
+pickerWasOpen = olPicker Or olStagePicker
+
+;--- stage picker (host): 50 = random, 51-65 = stage 1-15, 66 = close
+If olStagePicker Then
+	For b=50 To 65
+		If clickedBut(b) Then
+			NetSetMap(b-50) : olStagePicker = 0
+			If gamesound Then PlaySound ddhitsnd
+		EndIf
+	Next
+	If clickedBut(66) Then olStagePicker = 0 : If gamesound Then PlaySound clickSnd
+EndIf
 
 ;--- character picker (opened from the button next to my name)
 If olPicker Then
@@ -419,8 +497,7 @@ If clickedBut(20) And canEdit Then
 	If gamesound Then PlaySound clickSnd
 EndIf
 If clickedBut(6) And host Then
-	m = NetMatchMap()+1 : If m > 15 Then m = 0
-	NetSetMap(m)
+	olStagePicker = 1
 	If gamesound Then PlaySound clickSnd
 EndIf
 If clickedBut(7) And host Then
@@ -443,7 +520,7 @@ pri priW(t$),98,t$
 olInfoBar()
 
 For b=1 To 7 : butOn(b)=0 : Next
-For b=10 To 40 : butOn(b)=0 : Next
+For b=10 To 66 : butOn(b)=0 : Next
 
 ;--- players panel
 olPanel(30,148,580,194,16,16,28)
@@ -488,7 +565,7 @@ Next
 ;--- countdown
 c = NetCountdown()
 If c >= 0 Then
-	olPicker = 0
+	olPicker = 0 : olStagePicker = 0
 	olPanel(160,200,320,80,40,40,90)
 	fontType=1
 	pri priW("match starts in "+c),232,"match starts in "+c
@@ -506,13 +583,15 @@ olButton(3,418,354,192,32,"leave room",1)
 olButton(4,30,424,110,30,"back",1)
 
 m = NetMatchMap()
-If m < 1 Or m > 15 Then st$ = "stage: random" Else st$ = "stage: "+m
+If m < 1 Or m > 15 Then st$ = "random" Else st$ = "stage "+m
 lv$ = "lives: "+NetMatchLives()
 If host And NetHeroSupported() Then
 	olButton(7,234,424,170,30,lv$,canEdit)
-	olButton(6,418,424,192,30,st$,canEdit)
+	olButton(6,418,424,192,30,"   "+st$,canEdit)
+	olStageMini(424,424,m)
 Else
-	olSmall(610-Len(lv$+"   "+st$)*8,431,lv$+"   "+st$,200,200,215)
+	olSmall(570-Len(lv$+"   "+st$)*8,431,lv$+"   "+st$,200,200,215)
+	olStageMini(570,424,m)
 EndIf
 
 ;hint line (when no other message is shown)
@@ -529,13 +608,57 @@ If olInfo$ = "" Or MilliSecs() - olInfoTime >= 3000 Then
 EndIf
 olShowInfo()
 
-If olPicker Then
+If olPicker Or olStagePicker Then
 	;only the picker reacts while it is open
 	For b=1 To 7 : butOn(b)=0 : Next
 	butOn(20)=0
-	olHeroPicker()
+	If olPicker Then olHeroPicker() Else olStageGrid()
 EndIf
 
+End Function
+
+;small picture of stage m (0 = random) with a frame, 40x30 at x,y
+Function olStageMini(x,y,m)
+Color 150,150,175 : Rect x-1,y-1,42,32,0
+If m >= 1 And m <= 15 And olMapMini(m) <> 0 Then
+	DrawImage olMapMini(m),x,y
+Else
+	Color 40,42,80 : Rect x,y,40,30,1
+	olSmallC(x+20,y+7,"?",255,210,90)
+EndIf
+End Function
+
+;grid of the 15 VS stages + random, buttons 50-65, close = 66
+Function olStageGrid()
+Color 0,0,0 : Rect 24,92,592,380,1
+olPanel(24,92,592,380,18,18,34)
+fontType=1
+pri priW("choose the stage"),98,"choose the stage"
+cur = NetMatchMap()
+For i=0 To 15
+	b = 50+i
+	x = 34 + (i Mod 4)*146
+	y = 124 + (i/4)*80
+	xBut(b)=x : yBut(b)=y : wBut(b)=136 : hBut(b)=76 : butOn(b)=1
+	If i = cur Then
+		Color 52,62,140 : Rect x,y,136,76,1
+		Color 255,200,60 : Rect x,y,136,76,0
+	ElseIf olHover(b) Then
+		Color 40,42,80 : Rect x,y,136,76,1
+		Color 130,150,255 : Rect x,y,136,76,0
+	Else
+		Color 28,30,48 : Rect x,y,136,76,1
+		Color 70,72,100 : Rect x,y,136,76,0
+	EndIf
+	If i >= 1 And olMapPic(i) <> 0 Then
+		DrawImage olMapPic(i),x+3,y+(76-ImageHeight(olMapPic(i)))/2
+		olSmall(x+106,y+30,i,255,255,255)
+	Else
+		olSmallC(x+68,y+22,"?",255,210,90)
+		olSmallC(x+68,y+42,"random",255,255,255)
+	EndIf
+Next
+olButton(66,250,442,140,26,"close",1)
 End Function
 
 ;character of member s (default by slot when the backend has no character choice)

@@ -5,6 +5,15 @@
 #include <string>
 #include <vector>
 
+// mkdir(path, mode) on every OS (Windows has _mkdir(path))
+#ifdef _WIN32
+#include <direct.h>
+#define MH_MKDIR(p, m) _mkdir(p)
+#else
+#include <sys/stat.h>
+#define MH_MKDIR(p, m) mkdir(p, m)
+#endif
+
 // ---- implemented by the backend (android_main.cpp / linux_main.cpp / web_main.cpp)
 void plat_present(const uint32_t *pix, int w, int h);   // show a composited frame (0x00RRGGBB)
 void plat_pump();                                        // process OS events, may block while paused

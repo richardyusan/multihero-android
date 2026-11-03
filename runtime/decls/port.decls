@@ -8,3 +8,5 @@ PortActDown%(player%, action%) ; 1 while touch / game pad holds the action (0 up
                            ; 4 attack 5 special 6 jump 7 block 8 throw) for player 1..4
 PortActHit%(player%, action%)  ; presses of that action since the last call
 PortCheat%(id%)            ; adventure cheats from the main menu: 1 = infinite health, 2 = infinite jutsu
+PortSetCheat(id%, on%)     ; switch an adventure cheat on/off (saved), same as the touch pills
+PortResizeImage%(image%, w%, h%) ; new image: the picture scaled to w x h (thumbnails)

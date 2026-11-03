@@ -58,3 +58,62 @@ If vsMode=0 Then
 	Next
 EndIf
 End Function
+
+;----------- main menu > CHEATS (menuOption = 7) ---------------------------------
+; The same switches as the touch buttons on the main menu, as menu items that the mouse
+; (PC, web), the touch screen and the pads can click. Saved by the runtime (port_cheats.cfg).
+Function cheatsMenu()
+pointers
+PortScreen(1)
+
+For n=1 To buttonAmount
+If clickedBut(n) Then
+	Select n
+	Case 1: PortSetCheat(1, 1-PortCheat(1))
+	Case 2: PortSetCheat(2, 1-PortCheat(2))
+	Case 3
+		If cheat(1)=0 Then
+			cheatUnlockAll()
+			warning=1 : warnSeq=0 : strWarning$="all characters and maps unlocked!"
+		Else
+			warning=1 : warnSeq=0 : strWarning$="already unlocked"
+		EndIf
+	Case 4: menuOption=2
+	End Select
+	If gamesound Then PlaySound ddhitsnd
+EndIf
+Next
+
+buttonAmount = 4
+For b=1 To 4
+	xBut(b)=110 : yBut(b)=200+(b-1)*36 : wBut(b)=420 : hBut(b)=24
+Next
+yBut(4)=yBut(4)+20
+
+butText$(1)="infinite health: "+portOnOff$(PortCheat(1))
+butText$(2)="infinite jutsu: "+portOnOff$(PortCheat(2))
+butText$(3)="unlock all chars + maps: "+portOnOff$(cheat(1))
+butText$(4)=strInfo$(48)	;back
+
+fontType=1
+pri priW("cheats"),155,"cheats"
+For b=1 To 4
+	If b < 4 Then
+		If (b=3 And cheat(1)=1) Or (b < 3 And PortCheat(b)=1) Then Color 40,140,70 Else Color 60,62,80
+		Rect 104,yBut(b)-3,432,26,1
+	EndIf
+	pri priW(butText$(b)),yBut(b),butText$(b)
+Next
+Color 200,200,215
+t$="health and jutsu work in adventure mode only"
+Text 320-Len(t$)*4,384,t$
+
+For n=1 To 4
+	DrawImage pointerPic(n),xpointer(n),ypointer(n)
+Next
+End Function
+
+Function portOnOff$(v)
+If v Then Return "on"
+Return "off"
+End Function

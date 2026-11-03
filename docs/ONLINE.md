@@ -261,7 +261,8 @@ backend. Demo bots are CPU fighters.
 |---|---|
 | A player presses ESC twice | their slot gets a "left" flag at an agreed frame; from that frame the CPU plays it on every phone |
 | Connection slow | the game waits and shows *waiting for players… n*; it continues when the data arrives |
-| A player disappears (app closed, no network) | after 4 s (player left the room) or 20 s without data: back to the lobby, "connection lost" |
+| A player disappears (app closed, no network) | as soon as the player is gone from the room, or after 15 s without data: every remaining phone reports the last input it has of that player (`L` message, the inputs are forwarded with `R`), all use the highest frame, and from the next frame the CPU plays that player – the same frame everywhere, so the match goes on in sync. Everybody sees "<name> left the room". |
+| This phone was offline too long | the others hand its player to the CPU; this phone stops the match: "connection too slow - you left the match" |
 | Match over | normal results screen, then back to the online lobby |
 
 Tested with two clients against Epic's live servers: identical checksums for whole matches with

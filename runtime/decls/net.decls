@@ -75,3 +75,8 @@ NetPlayDesync%()           ; first frame where the checksums differed, -1 = in s
 NetPlaySilentMs%()         ; ms since the last packet from another player
 NetPlayPeerGone%()         ; 1 = a player we wait for has left the room
 NetPlayEnd()
+NetPlayLeftAt%(slot%)      ; frame after which the CPU plays a player who left (-1 = still playing)
+NetPlayKicked%()           ; 1 = the others decided that this phone left (offline too long)
+NetPlaySlotState%(slot%)   ; 0 none, 1 connected, 2 no data for a while, 3 left (CPU now), 4 CPU bot
+NetPlaySlotPing%(slot%)    ; ping shown for that player in ms, -1 = unknown / host
+NetPlaySlotName$(slot%)    ; player name of that slot (frozen when the match started)

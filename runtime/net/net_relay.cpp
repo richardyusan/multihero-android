@@ -18,9 +18,10 @@
 // the hook for real netplay (inputs per frame, state sync), which is not implemented yet.
 #include "net.h"
 
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__) || defined(_WIN32)
 // Browsers cannot open plain TCP sockets (and the web build has no threads): the relay needs a
-// WebSocket front end there. net.cpp falls back to the demo backend.
+// WebSocket front end there. The Windows build uses Epic online; a Winsock port of this client
+// is still to do. net.cpp falls back to the demo backend.
 NetBackend *net_create_relay() { return nullptr; }
 #else
 
