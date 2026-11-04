@@ -3,8 +3,11 @@
 // and backend selection.
 //
 // online.cfg (bundled with the assets, can be overridden by a copy in the app's data folder):
-//   backend = auto | demo | relay | eos     (auto: relay when "server" is set, otherwise demo)
-//   server  = my-vps.example.com            (relay backend)
+//   backend = auto | demo | relay | worker | eos
+//             auto: "worker" when "server" is a web address (https://...), "relay" for a
+//             plain host name, "demo" when no server is set
+//   server  = https://multihero-server.example.workers.dev   (worker backend, web build)
+//             my-vps.example.com                             (relay backend)
 //   port    = 7777
 //   name    = player name (default: random "player1234", remembered in online_name.txt)
 //   max_players = 4
@@ -23,9 +26,20 @@
 
 NetBackend *net_create_demo();
 NetBackend *net_create_relay();
+NetBackend *net_create_worker();  // nullptr outside the web build (needs the browser's WebSocket)
 NetBackend *net_create_eos();   // nullptr when built without MH_WITH_EOS
+bool net_worker_ask_code();     // "enter room code" was chosen (native builds, net_worker.cpp)
 
-static std::unique_ptr<NetBackend> g_net;
+// The backend is deleted only by NetShutdown, never by the static destructors at exit: other
+// files' globals (the worker's socket queues, the EOS platform) may already be gone by then.
+struct NetHolder {
+  NetBackend *p = nullptr;
+  NetBackend *get() const { return p; }
+  NetBackend *operator->() const { return p; }
+  explicit operator bool() const { return p != nullptr; }
+  void reset(NetBackend *n = nullptr) { delete p; p = n; }
+};
+static NetHolder g_net;
 static std::string g_init_note;          // shown as "error" text when we fell back to another backend
 static int g_last_sender = 0;
 void bb_netplaysend(int frame, int mask);
@@ -103,6 +117,11 @@ NetBackend *net_create_backend(const std::string &kindIn, std::string &note) {
     note = "epic sdk not built in - using demo";
     kind = "demo";
   }
+  if (kind == "worker" || kind == "cloudflare") {
+    if (NetBackend *b = net_create_worker()) return b;
+    note = "online servers not available - using demo";
+    return net_create_demo();
+  }
   if (kind == "relay") {
     if (NetBackend *b = net_create_relay()) return b;
     note = "vps relay not available on this platform - using demo";
@@ -115,11 +134,22 @@ NetBackend *net_create_backend(const std::string &kindIn, std::string &note) {
 static NetBackend *net() { return g_net.get(); }
 static bool idx_ok(int i, size_t n) { return i >= 1 && (size_t)i <= n; }
 
+// backend chosen in the lobby (NetSwitch "eos" / "worker"); empty = the one of online.cfg
+static std::string g_kind_override, g_kind;
+
 int bb_netinit() {
   if (g_net) return 1;
   NetConfig cfg = load_config();
   std::string kind = bb_lower(cfg.get("backend", "auto"));
-  if (kind == "auto") kind = cfg.get("server").empty() ? "demo" : "relay";
+  if (!g_kind_override.empty()) kind = g_kind_override;
+  if (kind == "auto") {
+    std::string srv = bb_lower(cfg.get("server"));
+    if (srv.empty()) kind = "demo";
+    else if (srv.compare(0, 4, "http") == 0 || srv.compare(0, 2, "ws") == 0) kind = "worker";
+    else kind = "relay";
+  }
+  if (kind == "cloudflare") kind = "worker";
+  g_kind = kind;
   g_init_note.clear();
   g_net.reset(net_create_backend(kind, g_init_note));
   g_net->cfg = cfg;
@@ -207,6 +237,49 @@ BStr bb_netrecvgame() {
   return m.data;
 }
 int bb_netrecvsender() { return g_last_sender; }
+
+// ------------------------------------------------------------------ servers / name / backend
+BStr bb_netkind() { return net() ? g_kind : ""; }
+// switch the lobby to another backend ("eos", "worker"; "" = the one of online.cfg)
+void bb_netswitch(const BStr &kind) {
+  bb_netshutdown();
+  g_kind_override = bb_lower(kind);
+  bb_netinit();
+}
+// the next NetInit uses this backend ("" = the one of online.cfg)
+void bb_netchoose(const BStr &kind) { g_kind_override = bb_lower(kind); }
+int bb_nethaseos() {
+#ifdef MH_WITH_EOS
+  return 1;
+#else
+  return 0;
+#endif
+}
+// 1 = the lobby draws its own server / name / room code buttons (the web page has a bar for them)
+int bb_netnativeui() {
+#ifdef __EMSCRIPTEN__
+  return 0;
+#else
+  return 1;
+#endif
+}
+int bb_netaskcode() { return net_worker_ask_code() ? 1 : 0; }
+void bb_netjoincode(const BStr &code) {
+  if (net() && net()->state == NET_ONLINE && !code.empty()) net()->joinRoom(code);
+}
+void bb_netsetname(const BStr &name) {
+  std::string n = trim(clean_name(name));
+  if (n.empty()) return;
+  int f = bb_writefile("online_name.txt");
+  if (f) { bb_writeline(f, n); bb_closefile(f); }
+  if (net()) { net()->playerName = n; net()->nameChanged(); }
+}
+int bb_netservercount() { return net() ? net()->serverCount() : 0; }
+BStr bb_netservername(int i) { return net() ? net()->serverName(i - 1) : ""; }
+int bb_netserverping(int i) { return net() ? net()->serverPing(i - 1) : -1; }
+int bb_netserveronline(int i) { return net() ? net()->serverOnline(i - 1) : -1; }
+int bb_netservercurrent() { return net() && net()->serverCount() > 0 ? net()->currentServer() + 1 : 0; }
+void bb_netsetserver(int i) { if (net()) net()->chooseServer(i - 1); }
 
 // ------------------------------------------------------------------ hero / stage choice
 int bb_netherosupported() { return net() && net()->supportsHeroes() ? 1 : 0; }

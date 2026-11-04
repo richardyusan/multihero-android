@@ -1,10 +1,14 @@
 # Multiplayer online
 
-Main menu → **MULTIPLAYER ONLINE** opens a lobby: room list with ping and player count, create /
-join room, READY, START (host), countdown.
+Main menu → **MULTIPLAYER ONLINE** opens the lobby of the **online servers** – the same rooms as the
+web version ([multihero-web](https://github.com/richardyusan/multihero-web)), so Android, Windows,
+Linux and browser players meet in one lobby. The **epic online** button at the bottom of the lobby
+switches to the Epic Online Services lobby (Android / Windows / Linux only) and **online servers**
+switches back.
 
-> **Status (v1.4.0):** lobby **and real-time online matches** through **Epic Online Services**
-> (P2P, no own server) or your own VPS relay. See [Real-time online matches](#real-time-online-matches-netplay).
+> **Status (v1.8.0):** real-time online matches through the **online servers** (Cloudflare Worker,
+> default), **Epic Online Services** (P2P) or your own VPS relay. See
+> [Real-time online matches](#real-time-online-matches-netplay).
 
 ## Architecture
 
@@ -14,26 +18,69 @@ src/online.bb            lobby screen (Blitz, uses the game's font/buttons/point
       ▼
 runtime/net/net.cpp      reads online.cfg, picks a backend, implements the Net* functions
       │  class NetBackend (runtime/net/net.h)
-      ├── net_demo.cpp   "demo (offline)": fake rooms and bots, no network - UI testing
-      ├── net_relay.cpp  "vps relay": TCP client for server/lobby_server.py   (working)
-      └── net_eos.cpp    "epic online": Epic Online Services Lobby + P2P      (working)
+      ├── net_worker.cpp "Server 1-4": rooms on the Cloudflare Worker      (default)
+      │     └── ws_client.cpp   WebSocket + TLS (Mbed TLS) client of the native builds;
+      │                         the web build uses the browser's WebSocket
+      ├── net_eos.cpp    "epic online": Epic Online Services Lobby + P2P
+      ├── net_relay.cpp  "vps relay": TCP client for server/lobby_server.py
+      └── net_demo.cpp   "demo (offline)": fake rooms and bots, no network - UI testing
 ```
 
 The Blitz code never knows which service is used, so adding a backend only touches `runtime/net/`.
 
 ### Choosing the backend: `config/online.cfg`
 
-The file is copied into the APK assets. A copy in the app's data folder overrides it.
+The file is copied into the game data. A copy in the app's data folder overrides it.
 `config/online.local.cfg` (not in git, for secrets) is read afterwards and overrides single keys.
 
 | Key | Meaning |
 |---|---|
-| `backend` | `auto` (relay if `server` is set, otherwise demo), `demo`, `relay`, `eos` |
-| `server`, `port` | lobby server address for `relay` (default port 7777) |
-| `name` | player name; empty = random `player1234`, remembered on the device |
-| `eos_*` | Epic Online Services credentials for `eos` |
+| `backend` | `auto` (`worker` if `server` is a web address, `relay` for a host name, otherwise demo), `worker`, `eos`, `relay`, `demo` |
+| `server`, `port` | Worker address (`https://…`) or lobby server address for `relay` (default port 7777) |
+| `name` | player name; empty = random `player1234`, remembered on the device (the **name** button changes it) |
+| `eos_*` | Epic Online Services credentials for the **epic online** lobby |
 
-With the default file (no server), the lobby runs in **demo** mode and says so in the info bar.
+The **epic online** button only switches for the current visit: MULTIPLAYER ONLINE always opens the
+online servers first.
+
+## Online servers (Cloudflare Worker) – default
+
+Rooms are hosted by a small [Cloudflare Worker](https://github.com/richardyusan/multihero-server)
+(one Durable Object per room, it only relays messages); the game runs on every device.
+Server: `https://multihero-server.multihero-web.workers.dev`.
+
+| Lobby | Region | Public rooms | Private codes |
+|---|---|---|---|
+| Server 1 – Asia Tenggara | `apac-se` | `SPUB1`–`SPUB3` | `S…` |
+| Server 2 – Asia Timur | `apac-ne` | `NPUB1`–`NPUB3` | `N…` |
+| Server 3 – US | `enam` | `UPUB1`–`UPUB3` | `U…` |
+| Server 4 – Eropa | `weur` | `EPUB1`–`EPUB3` | `E…` |
+
+### Playing with friends
+
+1. **MULTIPLAYER ONLINE** shows the rooms of one server: PUBLIC ROOM 1–3 (players x/4, host, ping,
+   "playing" while a match runs), **enter room code** and rooms you used recently. Tap a public room
+   twice (or select it + JOIN ROOM) to join whoever is there.
+2. The **server** button at the bottom opens the server picker (ping and players online per server;
+   the choice is remembered, the first time the lowest ping is chosen).
+3. **CREATE ROOM** makes a private room; its code (e.g. `SKX4P`) is the room's title. Friends choose
+   **enter room code** and type it on the keypad (a keyboard works too). Browser players can also
+   use the invite link of the web version (`…/multihero-web/?room=SKX4P`).
+4. **name** changes the name shown to the others.
+5. In the room everybody picks a character, the host picks stage and lives; READY, then START.
+   After the match everybody comes back to the same room.
+
+### How the native builds connect
+
+The web version uses the browser's WebSocket. Android, Windows and Linux use
+`runtime/net/ws_client.cpp`: a WebSocket (RFC 6455) and HTTP client with one thread per connection,
+TLS by **Mbed TLS** 3.6 (`tools/fetch_mbedtls.py` downloads it, the build scripts compile it) and the
+Mozilla root certificates compiled in (`runtime/net/ca_roots.inc`, made by `tools/mkcaroots.py` from
+certifi), so no system certificate store is needed. `net_worker_native.inc` turns the server's JSON
+into the same event lines the web version's JavaScript produces, so `net_worker.cpp` is shared.
+
+Protocol details (messages, rate limits, the public-room probes): see
+[docs/ONLINE.md of multihero-web](https://github.com/richardyusan/multihero-web/blob/main/docs/ONLINE.md).
 
 ## Option A – own server on an Oracle Cloud free VPS (ready to use)
 

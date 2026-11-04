@@ -34,8 +34,10 @@
   (super bar always full) – Adventure mode only – and **UNLOCK ALL CHARACTERS + MAPS**, each ON/OFF
 - **UNLOCK ALL** button on the main menu – runs the game's own cheat (Backspace ×5, Enter): all characters, VS stages,
   and (added by the port) all 50 Adventure maps and the CTF maps
-- **MULTIPLAYER ONLINE**: real-time online VS matches for up to 4 players; lobby with room list, ping, player count,
-  character choice, stage choice with pictures, READY, START, every player's connection and ping during the match – through **Epic Online Services** (free P2P, no own server), your own lobby server (e.g. Oracle Cloud free VPS) or an offline demo ([docs/ONLINE.md](docs/ONLINE.md))
+- **MULTIPLAYER ONLINE**: real-time online VS matches for up to 4 players on **4 online servers** (Asia Tenggara,
+  Asia Timur, US, Eropa) – the same rooms as the web version and MultiHero Online for PC; public rooms, private rooms
+  with a code, character choice, stage choice with pictures, READY, START, every player's connection and ping during
+  the match. The **epic online** button switches to the Epic Online Services lobby ([docs/ONLINE.md](docs/ONLINE.md))
 - **Several gamepads** (Bluetooth/USB): the first pad used is player 1, the second player 2, up to 4 – local VS and
   Adventure with friends; players 2-4 move their menu pointer with their pad. Hardware keyboards work too
 - Crisp "sharp bilinear" scaling with OpenGL ES 2, low-latency audio via AAudio
@@ -121,7 +123,8 @@ cd build/web && python3 -m http.server 8080   # open http://localhost:8080
 ```
 
 Keyboard, mouse, gamepad and touch all work; settings are saved in the browser. Details in [docs/WEB.md](docs/WEB.md).
-In the browser the online lobby runs in demo mode (browsers cannot open the relay's TCP connection).
+In the browser the online lobby uses the same online servers (the web version lives in
+[multihero-web](https://github.com/richardyusan/multihero-web)).
 
 ### Test on a PC without a phone
 
@@ -153,14 +156,18 @@ the controls screen waits for a key now keeps the old key instead of leaving it 
 
 ## Multiplayer online
 
-Main menu → **MULTIPLAYER ONLINE**. The backend is chosen in `config/online.cfg`:
+Main menu → **MULTIPLAYER ONLINE** opens the lobby of the **online servers** (a Cloudflare Worker,
+[multihero-server](https://github.com/richardyusan/multihero-server)): the same rooms as the web version and
+the PC version, 4 servers to choose from, public rooms and private rooms with a code. Buttons at the bottom:
 
-- **demo** (default, no server set): offline simulation with sample rooms and bots, for trying the lobby
-- **relay**: your own server – run `server/lobby_server.py` on a VPS (step-by-step for an Oracle Cloud
-  free VM in [docs/ONLINE.md](docs/ONLINE.md)), then set `backend = relay` and `server = <ip>`
-- **eos**: Epic Online Services – lobbies and peer-to-peer through Epic, free, no own server, no Epic account
-  needed (anonymous device login). Needs the EOS SDK at build time (`tools/setup_eos.py`) and your credentials
-  in `config/online.local.cfg`; works on arm64 and x86_64 phones (Epic has no 32-bit ARM library)
+- **server** – choose Server 1–4 (ping and players online for each)
+- **epic online** – switch to the **Epic Online Services** lobby (P2P through Epic, no Epic account needed;
+  needs the EOS SDK at build time (`tools/setup_eos.py`) and credentials in `config/online.local.cfg`;
+  arm64 and x86_64 phones) – **online servers** switches back
+- **name** – the name the others see
+
+Other backends for `config/online.cfg`: **relay** (your own server, `server/lobby_server.py` on a VPS, see
+[docs/ONLINE.md](docs/ONLINE.md)) and **demo** (offline simulation with bots).
 
 In the room each player picks a character and the host picks the stage; after START the match is played
 **online in real time** – every phone runs the same fight and only the buttons travel over the network

@@ -80,3 +80,19 @@ NetPlayKicked%()           ; 1 = the others decided that this phone left (offlin
 NetPlaySlotState%(slot%)   ; 0 none, 1 connected, 2 no data for a while, 3 left (CPU now), 4 CPU bot
 NetPlaySlotPing%(slot%)    ; ping shown for that player in ms, -1 = unknown / host
 NetPlaySlotName$(slot%)    ; player name of that slot (frozen when the match started)
+
+; ---- servers, player name, backend choice (lobby of the native builds)
+NetKind$()                 ; "worker" (cloudflare servers), "eos", "relay", "demo"; "" = not connected
+NetSwitch(kind$)           ; reconnect the lobby with another backend: "eos", "worker", "" = online.cfg
+NetChoose(kind$)           ; the next NetInit uses this backend ("" = online.cfg)
+NetHasEos%()               ; 1 = this build has Epic Online Services
+NetNativeUi%()             ; 1 = the lobby draws server / name / code buttons (0 in the web build: page bar)
+NetAskCode%()              ; 1 (once) = "enter room code" was chosen in the room list
+NetJoinCode(code$)         ; join a room by its code (4-8 letters/digits)
+NetSetName(name$)          ; change and remember the player name
+NetServerCount%()          ; servers to choose from (0 = not known yet)
+NetServerName$(i%)
+NetServerPing%(i%)         ; -1 = not measured yet
+NetServerOnline%(i%)       ; players in the public rooms of server i, -1 = unknown
+NetServerCurrent%()        ; server shown in the lobby (1..n), 0 = none
+NetSetServer(i%)

@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.8.0 – 2026-11-04
+- **MULTIPLAYER ONLINE now opens the online servers** (Cloudflare Worker, the same rooms as the web version): 4 servers
+  (Asia Tenggara, Asia Timur, US, Eropa) with ping and players online, 3 public rooms per server, private rooms with a
+  code, recent rooms. Android, Windows, Linux and browser players play together.
+- Lobby buttons: **server** (server picker), **epic online** (switches to the Epic Online Services lobby, **online
+  servers** switches back), **name** (keypad); **enter room code** opens a keypad (a keyboard works too).
+- New native WebSocket + TLS client (`runtime/net/ws_client.cpp`, Mbed TLS, built-in root certificates).
+- versionCode 9, versionName 0.96-android1.8.
+
 ## 1.7.0 – 2026-11-04
 - Main menu **CHEATS** page: INFINITE HEALTH, INFINITE JUTSU (Adventure mode) and UNLOCK ALL CHARACTERS + MAPS as
   ON/OFF items that the mouse (PC, web), the touch screen and the pads can click.

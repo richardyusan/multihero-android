@@ -6,8 +6,13 @@ HERE="$(cd "$(dirname "$0")/.." && pwd)"
 GAME_DIR="${1:-$HERE/game}"
 mkdir -p "$HERE/build"
 python3 "$HERE/tools/bb2cpp.py" "$HERE/src/mh.bb" "$HERE/build/mh.cpp" "$HERE"/runtime/decls/*.decls
-g++ -std=c++17 -O2 -fwrapv -ffp-contract=off -w -I"$HERE/runtime" "$HERE/build/mh.cpp" "$HERE/runtime/bbrt.cpp" \
-    "$HERE/runtime/mh_glue.cpp" "$HERE/runtime/linux_main.cpp" "$HERE"/runtime/net/*.cpp \
+# TLS for the online servers (wss://), when tools/fetch_mbedtls.py was run
+TLS_CFLAGS=""; TLS_LIBS=""
+if "$HERE/tools/build_mbedtls.sh" "$HERE/build/tls-linux" gcc ar; then
+  TLS_CFLAGS="-DMH_WITH_TLS -I$HERE/third_party/mbedtls/include"; TLS_LIBS="$HERE/build/tls-linux/libmhtls.a"
+fi
+g++ -std=c++17 -O2 -fwrapv -ffp-contract=off -w -I"$HERE/runtime" $TLS_CFLAGS "$HERE/build/mh.cpp" "$HERE/runtime/bbrt.cpp" \
+    "$HERE/runtime/mh_glue.cpp" "$HERE/runtime/linux_main.cpp" "$HERE"/runtime/net/*.cpp $TLS_LIBS \
     -o "$HERE/build/mh_linux" -lpthread
 echo "built build/mh_linux"
 if [ ! -f "$GAME_DIR/maps.dat" ]; then

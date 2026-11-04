@@ -43,8 +43,8 @@ Global choosemap,gameLives, map, map_,backg,title,curMap,sndStr$,loadOnce,Tn,str
 Global buttonAmount,gmStr$,gamestart,mapAmount,lastgamemode,butNA,butHum,butCPU, mapComplete, secretsFound,secretsAmount
 Global fontType=1, fontSpace=1, previousMap, screenShotN
 Dim NextMap(5)
-Dim butOn(100),xBut(100),yBut(100),wbut(100),hBut(100),clickedBut(100),lastBut(100)
-Dim clickedBy(100),butPic(100),butPic2(100),butText$(100),butSeq(100),tpic(100)
+Dim butOn(120),xBut(120),yBut(120),wbut(120),hBut(120),clickedBut(120),lastBut(120)
+Dim clickedBy(120),butPic(120),butPic2(120),butText$(120),butSeq(120),tpic(120)
 Dim xPointer(10),yPointer(10),zName$(10),zThumbNail(10),mapTn(100)
 
 Dim tempN#(10), strinfo$(200), characterOpen(30)

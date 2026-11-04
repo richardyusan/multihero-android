@@ -92,7 +92,7 @@ if [ -z "$NO_EOS" ] && [ -f "$EOS_SDK/Include/eos_sdk.h" ] && [ -n "$EOS_AAR" ];
 </resources>
 EOX
   echo "   EOS SDK: $EOS_AAR"
-  echo "   EOS ABIs: $(ls "$OUT/aar/eossdk/jni" | tr '\n' ' ')(other ABIs build without Epic online, they use the demo lobby)"
+  echo "   EOS ABIs: $(ls "$OUT/aar/eossdk/jni" | tr '\n' ' ')(other ABIs build without Epic online)"
 else
   echo "   EOS SDK not found ($EOS_SDK) - building without Epic online (see docs/ONLINE.md)"
 fi
@@ -116,7 +116,14 @@ for ABI in $ABIS; do
   fi
   # -ffp-contract=off: no fused multiply-add, so the game's float maths gives the same result on
   # every CPU (online matches run the same simulation on every phone)
-  CFLAGS="-O2 -fPIC -fwrapv -ffp-contract=off -ffunction-sections -fdata-sections -w -I$HERE/runtime -I$GLUE $ABI_CFLAGS $EXTRA_CFLAGS"
+  # TLS (wss://) for the online servers: Mbed TLS, see tools/fetch_mbedtls.py
+  TLS_CFLAGS=""; TLS_LIB=""
+  if "$HERE/tools/build_mbedtls.sh" "$HERE/build/tls-android/$ABI" "$TC/clang --target=$TRIPLE -fPIC -ffunction-sections -fdata-sections" "$TC/llvm-ar"; then
+    TLS_CFLAGS="-DMH_WITH_TLS -I$HERE/third_party/mbedtls/include"; TLS_LIB="$HERE/build/tls-android/$ABI/libmhtls.a"
+  else
+    echo "   Mbed TLS not found (python3 tools/fetch_mbedtls.py) - the online servers will not work"
+  fi
+  CFLAGS="-O2 -fPIC -fwrapv -ffp-contract=off -ffunction-sections -fdata-sections -w -I$HERE/runtime -I$GLUE $ABI_CFLAGS $TLS_CFLAGS $EXTRA_CFLAGS"
   PIDS=""
   $TC/clang --target=$TRIPLE $CFLAGS -c "$GLUE/android_native_app_glue.c" -o "$OUT/obj/$ABI/glue.o" & PIDS="$PIDS $!"
   $CXX -std=c++17 $CFLAGS -c "$OUT/gen/mh.cpp" -o "$OUT/obj/$ABI/mh.o" & PIDS="$PIDS $!"
@@ -129,7 +136,7 @@ for ABI in $ABIS; do
   for p in $PIDS; do wait $p || { echo "compile failed ($ABI)"; exit 1; }; done
   $CXX -shared -o "$OUT/lib/$ABI/libmultihero.so" "$OUT/obj/$ABI/"*.o \
       -static-libstdc++ -Wl,--gc-sections -Wl,-z,max-page-size=16384 -Wl,--exclude-libs,ALL \
-      -Wl,--no-undefined -u ANativeActivity_onCreate -landroid -llog -lEGL -lGLESv2 -laaudio -lm $ABI_LDFLAGS $EXTRA_LDFLAGS
+      -Wl,--no-undefined -u ANativeActivity_onCreate $TLS_LIB -landroid -llog -lEGL -lGLESv2 -laaudio -lm $ABI_LDFLAGS $EXTRA_LDFLAGS
   "$TC/llvm-strip" --strip-unneeded "$OUT/lib/$ABI/libmultihero.so"
   ls -la "$OUT/lib/$ABI/libmultihero.so"
 done

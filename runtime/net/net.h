@@ -91,6 +91,15 @@ class NetBackend {
   virtual void setHero(int hero) { myHero = hero; for (auto &m : members) if (m.me) m.hero = hero; }
   virtual void setMap(int map) { matchMap = map; }
   virtual void setLives(int lives) { matchLives = lives; }
+  // optional: several servers to choose from (Cloudflare Worker backend), index 0..n-1
+  virtual int serverCount() const { return 0; }
+  virtual std::string serverName(int) const { return std::string(); }
+  virtual int serverPing(int) const { return -1; }
+  virtual int serverOnline(int) const { return -1; }
+  virtual int currentServer() const { return 0; }
+  virtual void chooseServer(int) {}
+  // playerName was changed (Net SetName)
+  virtual void nameChanged() { for (auto &m : members) if (m.me) m.name = playerName; }
 
   // ---- shared state, read by the Net* functions
   NetConfig cfg;

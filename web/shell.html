@@ -11,7 +11,8 @@
     font: 15px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; touch-action: none;
     -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
   #stage { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
-  canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; background: #000; outline: none; }
+  canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; background: #000; outline: none;
+    cursor: none; /* the game draws its own pointer */ }
   .panel { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center;
     justify-content: center; gap: 14px; background: #000; text-align: center; padding: 16px; z-index: 2; }
   .panel h1 { margin: 0; font-size: 34px; letter-spacing: 2px; color: #fff; }
@@ -25,6 +26,16 @@
   #tools:hover { opacity: 1; }
   #tools button { font: 13px system-ui, sans-serif; background: #222; color: #ddd; border: 1px solid #444;
     border-radius: 4px; padding: 4px 8px; cursor: pointer; }
+  #netbar { position: fixed; top: 40px; left: 50%; transform: translateX(-50%); z-index: 1; display: flex;
+    align-items: center; gap: 6px; padding: 4px 6px; border-radius: 6px; background: rgba(16,16,28,.88);
+    border: 1px solid #3a3a55; font-size: 13px; white-space: nowrap; }
+  #netbar b { color: #ffd34d; letter-spacing: 2px; font-size: 15px; }
+  #netbar button { font: 13px system-ui, sans-serif; background: #2a2a48; color: #eee; border: 1px solid #55557a;
+    border-radius: 4px; padding: 4px 9px; cursor: pointer; }
+  #netbar select { font: 13px system-ui, sans-serif; background: #2a2a48; color: #eee; border: 1px solid #55557a;
+    border-radius: 4px; padding: 3px 4px; max-width: 46vw; }
+  #netbar button.go { background: #e8b400; color: #000; border-color: #e8b400; font-weight: 700; }
+  .invite { color: #ffd34d; font-size: 15px; }
   #rotate { position: fixed; inset: 0; z-index: 3; background: #000; display: none; align-items: center;
     justify-content: center; text-align: center; padding: 20px; }
   @media (orientation: portrait) and (pointer: coarse) { body.playing #rotate { display: flex; } }
@@ -33,6 +44,13 @@
 <body>
 <div id="stage"><canvas id="canvas" tabindex="-1" oncontextmenu="event.preventDefault()"></canvas></div>
 <div id="tools" class="hidden"><button id="btn-fs" title="Full screen (F11)">⛶ Full screen</button><button id="btn-mute">🔊</button></div>
+<div id="netbar" class="hidden">
+  <span id="nb-room" class="hidden">Room <b id="nb-code-text"></b></span>
+  <button id="nb-copy" class="go hidden">📋 Copy invite link</button>
+  <select id="nb-server" class="hidden" title="Online server"></select>
+  <button id="nb-join" class="go hidden">⌨ Join with code</button>
+  <button id="nb-name">👤 <span id="nb-name-text"></span></button>
+</div>
 
 <div id="loading" class="panel">
   <h1>MULTIHERO</h1>
@@ -45,7 +63,8 @@
   <button class="big" id="btn-start">▶ Play</button>
   <div class="small">Keyboard: W A S D move · N attack · M jump · H special · Space block · J throw · Enter OK · Esc menu.
     Gamepads work too. On a phone, turn it sideways and use the on-screen buttons.</div>
-  <div class="small">MultiHero 0.96 by mhman · web port of the Android port</div>
+  <div id="invite" class="invite hidden"></div>
+  <div class="small">MultiHero 0.96 by mhman · web port 1.7.1 · plays together with Android and PC 1.8.0</div>
 </div>
 
 <div id="ended" class="panel hidden">
@@ -145,6 +164,60 @@ function setMuted(m) {
   muted = m; $('btn-mute').textContent = m ? '🔇' : '🔊';
   if (Module.mhAudio) { if (m) Module.mhAudio.ctx.suspend(); else Module.mhAudio.ctx.resume(); }
 }
+
+// ---------------------------------------------------------------- online lobby bar (runtime/net/net_worker.cpp)
+// The game shows the room list / room; this bar adds what is easier on a web page: typing a room
+// code, copying the invite link (index.html?room=CODE) and changing the player name.
+function netQ() { return Module.mhNet || (Module.mhNet = { q: [], uq: [] }); }
+var netCode = '', netName = '';
+Module.mhNetUi = function (mode, code, name, servers, cur) {
+  netCode = code; netName = name;
+  var sel = $('nb-server'), list = (servers || '').split('\n').filter(function (l) { return l; });
+  sel.classList.toggle('hidden', mode !== 1 || !list.length);
+  if (list.length) {
+    while (sel.options.length > list.length) sel.remove(sel.options.length - 1);
+    list.forEach(function (l, i) {
+      var f = l.split('\t'), ping = +f[1], on = +f[2];
+      var t = '🌐 ' + f[0] + (ping >= 0 ? ' · ' + ping + ' ms' : ' · …') + (on >= 0 ? ' · ' + on + ' online' : '');
+      if (!sel.options[i]) sel.add(new Option(t, i)); else if (sel.options[i].text !== t) sel.options[i].text = t;
+    });
+    if (document.activeElement !== sel) sel.selectedIndex = cur;
+  }
+  $('netbar').classList.toggle('hidden', mode === 0);
+  $('nb-room').classList.toggle('hidden', mode !== 2);
+  $('nb-copy').classList.toggle('hidden', mode !== 2);
+  $('nb-join').classList.toggle('hidden', mode !== 1);
+  $('nb-code-text').textContent = code;
+  $('nb-name-text').textContent = name;
+};
+Module.mhNetAskCode = function () {
+  var c = prompt('Room code (4-8 letters or digits) from your friend:', '');
+  if (c) netQ().uq.push('K\t' + c.replace(/[\t\r\n]/g, '').trim());
+  canvas.focus();
+};
+function inviteLink(code) { return location.origin + location.pathname + '?room=' + code; }
+$('nb-join').onclick = function () { Module.mhNetAskCode(); };
+$('nb-server').onchange = function () { netQ().uq.push('V\t' + this.value); this.blur(); canvas.focus(); };
+$('nb-name').onclick = function () {
+  var n = prompt('Your name in online rooms (max 16 characters):', netName);
+  if (n && n.trim()) netQ().uq.push('N\t' + n.replace(/[\t\r\n]/g, ' ').trim().slice(0, 16));
+  canvas.focus();
+};
+$('nb-copy').onclick = function () {
+  var link = inviteLink(netCode), b = $('nb-copy');
+  var done = function () { b.textContent = '✔ Link copied'; setTimeout(function () { b.textContent = '📋 Copy invite link'; }, 2000); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(link).then(done, function () { prompt('Send this link to your friends:', link); });
+  else prompt('Send this link to your friends:', link);
+  canvas.focus();
+};
+(function () {
+  var m = /[?&]room=([A-Za-z0-9]{4,8})/.exec(location.search || '');
+  if (m) {
+    $('invite').textContent = 'You are invited to room ' + m[1].toUpperCase() +
+      ' — press Play, then MULTIPLAYER ONLINE to join it.';
+    $('invite').classList.remove('hidden');
+  }
+})();
 
 // ---------------------------------------------------------------- start
 $('btn-start').onclick = function () {

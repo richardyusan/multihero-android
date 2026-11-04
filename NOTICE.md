@@ -20,5 +20,10 @@ example in GitHub Releases), be aware that it contains that game data.
 
 - Android NDK / SDK (Google) – used at build time only, not redistributed here.
 - `android_native_app_glue` from the Android NDK (Apache License 2.0) is compiled into the APK.
+- **Mbed TLS** 3.6 (Apache License 2.0, https://github.com/Mbed-TLS/mbedtls) is compiled into the Android,
+  Windows and Linux programs for the secure connection to the online servers. It is downloaded at build time
+  by `tools/fetch_mbedtls.py`, not stored in this repository.
+- `runtime/net/ca_roots.inc` holds the Mozilla root certificate list (from the certifi package,
+  Mozilla Public License 2.0).
 - The built-in debug font in `runtime/font8x16.h` is rendered from DejaVu Sans Mono
   (Bitstream Vera / DejaVu font license, free to use and embed).

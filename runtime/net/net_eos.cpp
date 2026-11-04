@@ -94,7 +94,7 @@ bool init_platform(const NetConfig &cfg) {
   EOS_InitializeOptions io = {};
   io.ApiVersion = EOS_INITIALIZE_API_LATEST;
   io.ProductName = "MultiHero";
-  io.ProductVersion = "0.96-android1.7";
+  io.ProductVersion = "0.96-android1.8";
   std::string dir = plat_data_dir() + "eos";
   MH_MKDIR(dir.c_str(), 0700);
 #ifdef __ANDROID__

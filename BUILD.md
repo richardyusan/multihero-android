@@ -15,6 +15,7 @@ These are the exact versions the released APK (v1.0.1) was built and tested with
 | Android NDK | **r28c** (`28.2.13676358`) | clang 19.0.1; any NDK r26+ should work |
 | Android SDK build-tools | **35.0.0** (34 without EOS) | `aapt2`, `d8`, `zipalign`, `apksigner`; d8 34 crashes on the EOS classes |
 | Epic Online Services SDK | **1.19.2.1** (optional) | Android SDK zip, unpacked by `tools/setup_eos.py` into `third_party/` |
+| Mbed TLS | **3.6.5** | `python3 tools/fetch_mbedtls.py` downloads it into `third_party/mbedtls` (checksum checked); needed for the online servers (wss://) |
 | Android SDK platform | **android-34** (rev 3) | only `android.jar` is used |
 | Android SDK cmdline-tools | 10.0 (`commandlinetools-linux-9862592`) | only needed to install the packages above |
 | JDK | OpenJDK **21** (17+ works) | `javac`, `keytool`; Java source compiled as Java 8 |

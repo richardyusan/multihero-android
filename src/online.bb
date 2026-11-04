@@ -6,8 +6,15 @@
 ; (offline demo, own VPS relay server, Epic Online Services P2P) is chosen in
 ; online.cfg, so this file does not need to change when a backend is added.
 ;
-; Button ids used here: 1-3 bottom row, 4 back, 5 retry, 6 stage, 7 lives, 10-15 room rows,
-; 20 my character, 30-39 character picker, 40 close picker.
+; Button ids used here: 1-3 bottom row, 4 back, 5 retry, 6 stage, 7 lives, 8 server, 9 switch
+; between the online servers and Epic, 10-15 room rows, 20 my character, 21 name,
+; 30-39 character picker, 40 close picker, 50-66 stage picker, 67-71 server picker,
+; 72-110 keypad (room code / name).
+;
+; Lobbies: MULTIPLAYER ONLINE opens the rooms of the online servers (Cloudflare Worker, the same
+; rooms as the web version, "worker" backend); the "epic online" button switches to Epic Online
+; Services (Android / Windows / Linux only) and back. The web version has a bar above the game
+; for server, room code and name (NetNativeUi() = 0), the other builds draw buttons here.
 ;
 ; Real-time play (np* functions at the end of this file): when the host presses START every
 ; phone loads the same stage with the same characters and random seed, then only the buttons
@@ -42,6 +49,10 @@ Global olStagePicker	;1 while the stage picker is open
 Dim olMapPic(15)	;stage thumbnails (100x75) and small versions (40x30) for the room
 Dim olMapMini(15)
 Global npNoticeText$, npNoticeTime	;banner during an online match ("x left the room")
+Global olSrvPicker	;1 while the server picker is open
+Global olKeyMode	;keypad open: 1 = room code, 2 = player name
+Global olKeyText$	;what was typed on the keypad
+Global olKeys$ = "abcdefghijklmnopqrstuvwxyz0123456789"
 olHeroName$(1)="ryu" : olHeroName$(2)="rash" : olHeroName$(3)="spider-man" : olHeroName$(4)="mario"
 olHeroName$(5)="mike" : olHeroName$(6)="gaiden" : olHeroName$(7)="batman" : olHeroName$(8)="predator"
 olHeroName$(9)="goku" : olHeroName$(10)="richter"
@@ -69,8 +80,9 @@ EndIf
 
 NetUpdate()
 PortScreen(2)	;hide the touch fighting controls, they would cover the lobby buttons
-buttonAmount = 70	;lobby buttons 1-7, rows 10-15, my character 20, fighter picker 30-40, stage picker 50-66
+buttonAmount = 110	;lobby buttons 1-9, rows 10-15, 20-21, pickers 30-71, keypad 72-110
 pointers
+If NetAskCode() Then olOpenKeys(1)	;"enter room code" in the room list (native builds)
 
 If NetMatchStarted() Then
 	onlineStartMatch()
@@ -92,10 +104,15 @@ End Function
 
 ;----------- ESC / back -------------------------------------------------------
 Function onlineBack()
+If olKeyMode Or olSrvPicker Then
+	olKeyMode=0 : olSrvPicker=0
+	Return
+EndIf
 If NetInRoom() Then
 	NetLeaveRoom()
 Else
 	NetShutdown()
+	NetChoose("")	;next time MULTIPLAYER ONLINE opens the online servers again
 	olActive=0
 	menuOption=2
 EndIf
@@ -348,8 +365,23 @@ End Function
 Function olListScreen()
 
 status$ = NetStatus$()
+popup = olKeyMode Or olSrvPicker
+If popup Then olPopupClicks()
 
 ;--- clicks (button rectangles are from the previous frame)
+If popup=0 Then
+If clickedBut(8) Then olSrvPicker=1 : If gamesound Then PlaySound clickSnd
+If clickedBut(9) Then
+	If NetKind$()="worker" Then
+		NetSwitch("eos") : olSetInfo("connecting to epic online...")
+	Else
+		NetSwitch("worker") : olSetInfo("connecting to the servers...")
+	EndIf
+	olSel=0
+	If gamesound Then PlaySound clickSnd
+	Return
+EndIf
+If clickedBut(21) Then olOpenKeys(2) : If gamesound Then PlaySound clickSnd
 For b=10 To 15
 	If clickedBut(b) Then
 		r = b-9
@@ -385,6 +417,7 @@ EndIf
 If clickedBut(5) Then
 	NetShutdown() : NetInit() : olSetInfo("retrying...")
 EndIf
+EndIf
 If olSel > NetRoomCount() Then olSel = 0
 
 ;--- header
@@ -401,6 +434,8 @@ olSmall(440,151,"PLAYERS",150,155,190)
 olSmall(528,151,"PING",150,155,190)
 
 For b=10 To 15 : butOn(b)=0 : Next
+butOn(5)=0 : butOn(8)=0 : butOn(9)=0 : butOn(21)=0
+For b=67 To 110 : butOn(b)=0 : Next
 
 If status$="connecting" Then
 	fontType=1
@@ -430,9 +465,12 @@ Else
 		fontType=1
 		pri 44,y+5,olCut$(olText$(NetRoomName$(r)),15)
 		olSmall(300,y+5,olCut$(NetRoomHost$(r),11),200,200,215)
-		pri 452,y+5,NetRoomPlayers(r)+"/"+NetRoomMax(r)
+		If NetRoomMax(r) > 0 Then pri 452,y+5,NetRoomPlayers(r)+"/"+NetRoomMax(r)	;0 = unknown (rooms joined by code)
 		olPing(528,y+7,NetRoomPing(r))
-		If NetRoomOpen(r)=0 Then olBadge(392,y+5,40,16,140,40,40,"FULL")
+		If NetRoomOpen(r)=0 Then
+			;a room that is playing says so in the host column; FULL only when it is really full
+			If NetRoomMax(r) = 0 Or NetRoomPlayers(r) >= NetRoomMax(r) Then olBadge(392,y+5,40,16,140,40,40,"FULL")
+		EndIf
 	Next
 EndIf
 
@@ -445,9 +483,183 @@ If on And olSel > 0 Then joinOk = NetRoomOpen(olSel)
 olButton(3,438,354,172,32,"join room",joinOk)
 olButton(4,30,424,110,30,"back",1)
 
-olSmall(610-Len("You: "+NetPlayerName$())*8,431,"You: "+NetPlayerName$(),200,200,215)
+If NetNativeUi() Then
+	;server of the lobby, switch to Epic and back, player name
+	If NetKind$()="worker" Then
+		cs = NetServerCurrent()
+		If cs > 0 Then sv$ = Lower(NetServerName$(cs)) Else sv$ = "servers..."
+		olButtonS(8,150,424,200,30,olCut$(sv$,24),cs > 0 And status$="online")
+		olButtonS(9,360,424,120,30,"epic online",NetHasEos())
+	Else
+		olButtonS(9,150,424,200,30,"online servers",1)
+	EndIf
+	olButtonS(21,490,424,120,30,"name: "+olCut$(NetPlayerName$(),9),1)
+Else
+	olSmall(610-Len("You: "+NetPlayerName$())*8,431,"You: "+NetPlayerName$(),200,200,215)
+EndIf
 olShowInfo()
 
+If popup Then
+	;only the open window reacts
+	For b=1 To 21 : butOn(b)=0 : Next
+	If olSrvPicker Then olSrvGrid() Else olKeypad()
+EndIf
+
+End Function
+
+;----------- server picker / keypad (native builds) ----------------------------
+Function olPopupClicks()
+If olSrvPicker Then
+	For b=67 To 70
+		If clickedBut(b) Then
+			NetSetServer(b-66) : olSrvPicker=0 : olSel=0
+			If gamesound Then PlaySound ddhitsnd
+		EndIf
+	Next
+	If clickedBut(71) Then olSrvPicker=0 : If gamesound Then PlaySound clickSnd
+EndIf
+If olKeyMode Then
+	done = 0
+	k = GetKey()	;typing on a keyboard works too
+	While k > 0
+		c$ = Lower(Chr(k))
+		If k = 8 Then
+			olKeyDel()
+		ElseIf k = 13 Then
+			done = 1
+		ElseIf Instr(olKeys$,c$) > 0 Then
+			olKeyAdd(c$)
+		EndIf
+		k = GetKey()
+	Wend
+	For b=72 To 107
+		If clickedBut(b) Then
+			olKeyAdd(Mid$(olKeys$,b-71,1))
+			If gamesound Then PlaySound clickSnd
+		EndIf
+	Next
+	If clickedBut(108) Then olKeyDel() : If gamesound Then PlaySound clickSnd
+	If clickedBut(109) Or done Then olKeyOk()
+	If clickedBut(110) Then olKeyMode=0 : If gamesound Then PlaySound clickSnd
+EndIf
+End Function
+
+Function olOpenKeys(mode)
+olKeyMode = mode : olSrvPicker = 0
+olKeyText$ = ""
+If mode = 2 Then
+	n$ = Lower(NetPlayerName$())
+	For i=1 To Len(n$)
+		If Instr(olKeys$,Mid$(n$,i,1)) > 0 And Len(olKeyText$) < 12 Then olKeyText$ = olKeyText$ + Mid$(n$,i,1)
+	Next
+EndIf
+While GetKey() : Wend	;forget keys pressed before
+End Function
+
+Function olKeyMax()
+If olKeyMode = 1 Then Return 8
+Return 12
+End Function
+
+Function olKeyAdd(c$)
+If Len(olKeyText$) < olKeyMax() Then olKeyText$ = olKeyText$ + c$
+End Function
+
+Function olKeyDel()
+If Len(olKeyText$) > 0 Then olKeyText$ = Left$(olKeyText$,Len(olKeyText$)-1)
+End Function
+
+Function olKeyOk()
+If olKeyMode = 1 Then
+	If Len(olKeyText$) < 4 Then
+		olSetInfo("a room code has 4-8 letters or digits")
+		Return
+	EndIf
+	NetJoinCode(Upper(olKeyText$))
+	olSetInfo("joining room "+olKeyText$+"...")
+	If gamesound Then PlaySound ddhitsnd
+ElseIf olKeyMode = 2 Then
+	If Len(olKeyText$) = 0 Then Return
+	NetSetName(olKeyText$)
+	olSetInfo("hello "+olKeyText$+"!")
+	If gamesound Then PlaySound ddhitsnd
+EndIf
+olKeyMode = 0
+End Function
+
+;4 servers with ping and players online, buttons 67-70, close = 71
+Function olSrvGrid()
+Color 0,0,0 : Rect 90,110,460,300,1
+olPanel(90,110,460,300,18,18,34)
+fontType=1
+pri priW("choose a server"),118,"choose a server"
+n = NetServerCount() : If n > 4 Then n = 4
+cur = NetServerCurrent()
+For i=1 To n
+	b = 66+i
+	x = 106 : y = 150+(i-1)*50
+	xBut(b)=x : yBut(b)=y : wBut(b)=428 : hBut(b)=44 : butOn(b)=1
+	If i = cur Then
+		Color 52,62,140 : Rect x,y,428,44,1
+		Color 255,200,60 : Rect x,y,428,44,0
+	ElseIf olHover(b) Then
+		Color 40,42,80 : Rect x,y,428,44,1
+		Color 130,150,255 : Rect x,y,428,44,0
+	Else
+		Color 28,30,48 : Rect x,y,428,44,1
+		Color 70,72,100 : Rect x,y,428,44,0
+	EndIf
+	olSmall(x+12,y+5,NetServerName$(i),255,255,255)
+	o = NetServerOnline(i)
+	If o >= 0 Then os$ = o+" online" Else os$ = "checking..."
+	olSmall(x+12,y+23,os$,170,190,255)
+	olPing(x+340,y+16,NetServerPing(i))
+Next
+If n = 0 Then olSmallC(320,220,"checking the servers...",200,200,215)
+olButton(71,250,364,140,30,"close",1)
+End Function
+
+;keypad for a room code (1) or the player name (2): keys 72-107, delete 108, ok 109, cancel 110
+Function olKeypad()
+Color 0,0,0 : Rect 40,100,560,360,1
+olPanel(40,100,560,360,18,18,34)
+fontType=1
+If olKeyMode = 1 Then t$ = "enter room code" Else t$ = "your name"
+pri priW(t$),106,t$
+olPanel(170,140,300,34,8,8,16)
+If olKeyMode = 1 Then v$ = Upper(olKeyText$) Else v$ = olKeyText$
+If (MilliSecs()/400) Mod 2 Then v$ = v$ + "_" Else v$ = v$ + " "
+olSmallC(320,149,v$,255,255,255)
+For i=1 To 36
+	b = 71+i
+	x = 52 + ((i-1) Mod 9)*60
+	y = 186 + ((i-1)/9)*44
+	xBut(b)=x : yBut(b)=y : wBut(b)=56 : hBut(b)=40 : butOn(b)=1
+	If olHover(b) Then olPanel(x,y,56,40,72,72,135) Else olPanel(x,y,56,40,42,42,86)
+	c$ = Mid$(olKeys$,i,1)
+	If olKeyMode = 1 Then c$ = Upper(c$)
+	olSmallC(x+28,y+12,c$,255,255,255)
+Next
+olButton(108,52,368,170,32,"delete",Len(olKeyText$) > 0)
+okOn = Len(olKeyText$) > 0
+If olKeyMode = 1 Then okOn = Len(olKeyText$) >= 4
+olButton(109,236,368,170,32,"ok",okOn)
+olButton(110,420,368,172,32,"cancel",1)
+If olKeyMode = 1 Then h$ = "4-8 letters or digits - the code is shown in the room" Else h$ = "up to 12 letters or digits"
+olSmallC(320,414,h$,170,190,255)
+End Function
+
+;button with small text (runtime font)
+Function olButtonS(b,x,y,w,h,txt$,enabled)
+xBut(b)=x : yBut(b)=y : wBut(b)=w : hBut(b)=h : butOn(b)=enabled
+If enabled Then
+	If olHover(b) Then olPanel(x,y,w,h,72,72,135) Else olPanel(x,y,w,h,42,42,86)
+	Color 255,200,60 : Rect x+3,y+h-4,w-6,2,1
+	olSmallC(x+w/2,y+(h-16)/2-1,txt$,255,255,255)
+Else
+	olPanel(x,y,w,h,24,24,32)
+	olSmallC(x+w/2,y+(h-16)/2-1,txt$,120,120,135)
+EndIf
 End Function
 
 ;----------- inside a room ----------------------------------------------------
@@ -519,8 +731,8 @@ t$ = olCut$(olText$(NetRoomTitle$()),22)
 pri priW(t$),98,t$
 olInfoBar()
 
-For b=1 To 7 : butOn(b)=0 : Next
-For b=10 To 66 : butOn(b)=0 : Next
+For b=1 To 9 : butOn(b)=0 : Next
+For b=10 To 110 : butOn(b)=0 : Next
 
 ;--- players panel
 olPanel(30,148,580,194,16,16,28)
@@ -706,7 +918,8 @@ If p >= 0 Then ps$ = p+" ms" Else ps$ = "-"
 olSmall(40,124,"Server: "+NetBackendName$(),200,200,215)
 olSmall(262,124,"Status: "+NetStatus$(),200,200,215)
 olSmall(408,124,"Ping: "+ps$,200,200,215)
-olSmall(510,124,"Online: "+NetOnlineCount(),200,200,215)
+If NetOnlineCount() >= 0 Then oc$ = NetOnlineCount() Else oc$ = "-"	;-1 = the server cannot count
+olSmall(510,124,"Online: "+oc$,200,200,215)
 End Function
 
 Function olPanel(x,y,w,h,r,g,b)
