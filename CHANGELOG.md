@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+- Server picker: choosing the server that is already shown now keeps it (it no longer switches to the
+  lowest ping by itself afterwards).
+- New screenshots: menu, Adventure, character select, VS, controls, cheats page, unlock, online lobby, room and an
+  online match (Android vs a web player on Server 3).
+
 ## 1.8.0 – 2026-11-04
 - **MULTIPLAYER ONLINE now opens the online servers** (Cloudflare Worker, the same rooms as the web version): 4 servers
   (Asia Tenggara, Asia Timur, US, Eropa) with ping and players online, 3 public rooms per server, private rooms with a

@@ -622,10 +622,14 @@ class NetWorker : public NetBackend {
     return publicCode(s2, o % PUB_N);
   }
   void setServer(int s) {
-    if (regions_ != 1 || s < 0 || s >= SERVER_N || s == cur_) return;
+    if (regions_ != 1 || s < 0 || s >= SERVER_N) return;
+    // picking the server that is already shown is a choice too: keep it (no automatic switch
+    // to the lowest ping later)
+    bool same = s == cur_;
     cur_ = s;
     chosen_ = true;
     saveServerChoice();
+    if (same) return;
     if (srvPing_[cur_] >= 0) ping = srvPing_[cur_];
     startSweep(false);
     buildRooms();

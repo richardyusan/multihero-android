@@ -21,6 +21,8 @@
   <img src="docs/screenshots/menu.png" width="49%" alt="Main menu">
   <img src="docs/screenshots/lobby.png" width="49%" alt="Multiplayer online lobby">
   <img src="docs/screenshots/room.png" width="49%" alt="Online room with ready status">
+  <img src="docs/screenshots/online_match.png" width="49%" alt="Online match (Android vs web player)">
+  <img src="docs/screenshots/cheats.png" width="49%" alt="Cheats page">
 </p>
 
 ## Features
